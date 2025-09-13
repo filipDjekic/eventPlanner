@@ -24,14 +24,13 @@ export async function uploadImage(eventId, file, opis=''){
   return data;
 }
 
-/** (NOVA) Učitaj događaj po ID-u */
 export async function getById(eventId){
   const { data } = await api.get(`dogadjaj/vrati-po-id/${eventId}`);
-  return data; // očekuje { Kapacitet, Beskonacno, ... }
+  return data;
 }
 
-/** (NOVO) Ažuriraj samo KarteIds na događaju (koristi postojeći updateDraft) */
 export async function updateTicketIds(eventId, ticketIds){
-  const body = { Id: eventId, KarteIds: ticketIds };
-  return await updateDraft(eventId, body);
+  return await updateDraft(eventId, { Id: eventId, KarteIds: ticketIds });
 }
+
+
