@@ -106,11 +106,15 @@ namespace EventOrganizerAPI.Services
             if (dto.DatumKraja.HasValue)
                 update = update.Set(d => d.DatumKraja, dto.DatumKraja.Value);
             if (!string.IsNullOrEmpty(dto.Lokacija))
-                update = update.Set(d => d.Lokacija, dto.Lokacija); // <- tekstualna lokacija!
+                update = update.Set(d => d.Lokacija, dto.Lokacija);
             if (!string.IsNullOrEmpty(dto.Kategorija))
                 update = update.Set(d => d.Kategorija, dto.Kategorija);
-            if (dto.Napomene != null)
-                update = update.Set(d => d.Napomene, dto.Napomene);
+
+            if (dto.Kapacitet.HasValue)                       // <—
+                update = update.Set(d => d.Kapacitet, dto.Kapacitet.Value);
+
+            if (dto.Karte != null)                            // <—
+                update = update.Set(d => d.Karte, dto.Karte);
 
             await _dogadjaji.UpdateOneAsync(filter, update);
         }

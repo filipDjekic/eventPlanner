@@ -30,7 +30,8 @@ export async function getById(eventId){
 }
 
 export async function updateTicketIds(eventId, ticketIds){
-  return await updateDraft(eventId, { Id: eventId, KarteIds: ticketIds });
+  return await updateDraft(eventId, { Id: eventId, Karte: ticketIds });
 }
+
 
 
