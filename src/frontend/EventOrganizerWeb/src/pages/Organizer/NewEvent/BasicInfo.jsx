@@ -44,6 +44,13 @@ export default function BasicInfo({ eventId, onEventId }){
 
   function extractId(obj){
     if(!obj) return null;
+    const cands = [obj.id, obj.Id, obj._id, obj.eventId, obj.dogadjajId, obj?.value?.id, obj?.value?.Id, obj?.value?._id, obj?._id?.$oid];
+    for (const v of cands){ if (typeof v === 'string' && v) return v; }
+    if (typeof obj === 'string') return obj;
+    return null;
+  }
+  function extractId(obj){
+    if(!obj) return null;
     const cand = [
       obj.id, obj.Id, obj._id, obj.eventId, obj.dogadjajId,
       obj.value?.id, obj.value?.Id, obj.value?._id, obj?._id?.$oid
@@ -99,6 +106,7 @@ export default function BasicInfo({ eventId, onEventId }){
     }
 
     return {
+      Id: (eventId || null),
       Naziv: form.Naziv.trim(),
       Lokacija: form.Lokacija.trim(),
       DatumPocetka: start ? start.toISOString() : null,

@@ -7,5 +7,6 @@ export async function createDraft(payload){
 }
 
 export async function updateDraft(eventId, payload){
-  return await newevent.updateDraft(eventId, payload);
+  const body = { ...(payload || {}), Id: eventId };
+  return await newevent.updateDraft(eventId, body);
 }
