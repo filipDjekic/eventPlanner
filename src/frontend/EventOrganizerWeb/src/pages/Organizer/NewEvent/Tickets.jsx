@@ -19,21 +19,19 @@ export default function Tickets({ eventId }){
   const [tickets, setTickets] = useState([]); // {localId, Id?, Naziv, Tip, Cena, BrojKarata, Boja, locked}
   const [capacity, setCapacity] = useState(null);
   const [infinite, setInfinite] = useState(false);
-  // Sync sa BasicInfo preko custom eventa + localStorage fallback
+  // Sync sa BasicInfo preko custom eventa (bez localStorage fallback-a)
   useEffect(() => {
     function onInfo(e){
       const d = e?.detail || {};
-      if(typeof d.Kapacitet === 'number') setCapacity(d.Kapacitet);
-      if(typeof d.Beskonacno === 'boolean') setInfinite(d.Beskonacno);
+      if ('Kapacitet' in d) {
+        const n = Number(d.Kapacitet);
+        setCapacity(Number.isFinite(n) && n > 0 ? n : null);
+      }
+      if ('Beskonacno' in d) {
+        setInfinite(d.Beskonacno === true);
+      }
     }
     window.addEventListener('ne:basicinfo', onInfo);
-    // initial from localStorage
-    try{
-      const bi = localStorage.getItem('ne_beskonacno');
-      const kc = localStorage.getItem('ne_kapacitet');
-      if(bi !== null) setInfinite(bi === 'true');
-      if(kc !== null) setCapacity(Number(kc));
-    }catch{}
     return () => window.removeEventListener('ne:basicinfo', onInfo);
   }, []);
 
@@ -222,41 +220,45 @@ export default function Tickets({ eventId }){
   }, []);
 
 
-  // AUTO karta kada je Beskonacno = true
+  // AUTO karta: samo kada postoji eventId i Beskonacno === true
   useEffect(() => {
-    if(infinite){
-      // ako nemamo nijednu kartu u UI, prikaži default odmah
-      const hasAny = tickets.length > 0;
-      const hasAuto = tickets.some(t => t.__auto);
-      if(!hasAny || !hasAuto){
-        const def = { localId: `auto-${Math.random().toString(36).slice(2)}`, Naziv:'Ulaznica', Tip:'besplatna', Cena:0, BrojKarata: Number(capacity || 9999999), Boja:'#ffffff', locked:true, __auto:true };
-        setTickets(prev => hasAuto ? prev : [def, ...prev]);
-      }
-      // ako imamo eventId i auto karta nema Id => kreiraj je na back-u i veži za događaj
-      (async () => {
-        if(eventId){
-          const idx = tickets.findIndex(t => t.__auto && !t.Id);
-          if(idx >= 0){
-            try{
-              const created = await ticketsApi.createTicket(eventId, {
-                Naziv:'Ulaznica', Tip:'besplatna', Cena:0, BrojKarata: Number(capacity || 9999999), Boja:'#ffffff', DogadjajId: eventId
-              });
-              const tid = created?.Id || created?.id || created;
-              if(tid){
-                const next = [...tickets];
-                next[idx] = { ...next[idx], Id: tid };
-                setTickets(next);
-                const ids = next.filter(x=>x.Id).map(x=>x.Id);
-                await neweventApi.updateTicketIds(eventId, ids);
-              }
-            }catch{ /* ignore for now */ }
-          }
+    if (!eventId || infinite !== true) return;
+    const hasAuto = tickets.some(t => t.__auto);
+    const hasUserTickets = tickets.some(t => !t.__auto);
+    if (hasAuto || hasUserTickets) return;
+
+    const def = {
+      localId: `auto-${Math.random().toString(36).slice(2)}`,
+      Naziv: 'Ulaznica',
+      Tip: 'besplatna',
+      Cena: 0,
+      BrojKarata: (typeof capacity === 'number' && capacity > 0) ? capacity : 9999999,
+      Boja: '#ffffff',
+      locked: true,
+      __auto: true
+    };
+    setTickets(prev => [def, ...prev]);
+
+    (async () => {
+      try{
+        const created = await ticketsApi.createTicket(eventId, {
+          Naziv: def.Naziv, Tip: def.Tip, Cena: 0, BrojKarata: def.BrojKarata, Boja: def.Boja, DogadjajId: eventId
+        });
+        const tid = created?.Id || created?.id || created;
+        if (tid){
+          setTickets(curr => curr.map(t => t.localId === def.localId ? { ...t, Id: tid } : t));
+          const ids = (tickets || []).filter(x=>x.Id).map(x=>x.Id);
+          await neweventApi.updateTicketIds(eventId, ids.concat([tid]));
         }
-      })();
-    }else{
-      // infinite off: ukloni auto kartu iz UI i baze (ako postoji)
+      }catch{}
+    })();
+  }, [eventId, infinite, capacity, tickets]);
+
+  // Kada Beskonacno postane false → ukloni auto kartu
+  useEffect(() => {
+    if (infinite === false) {
       const idx = tickets.findIndex(t => t.__auto);
-      if(idx >= 0){
+      if (idx >= 0) {
         (async () => {
           const t = tickets[idx];
           try{
@@ -267,11 +269,11 @@ export default function Tickets({ eventId }){
               const ids = next.filter(x=>x.Id).map(x=>x.Id);
               await neweventApi.updateTicketIds(eventId, ids);
             }
-          }catch{ /* ignore */ }
+          }catch{}
         })();
       }
     }
-  }, [infinite, eventId, capacity, tickets]);
+  }, [infinite]);
 
   const disabledAll = !eventId || infinite;
 

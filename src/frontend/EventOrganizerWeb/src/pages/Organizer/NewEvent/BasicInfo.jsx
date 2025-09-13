@@ -52,16 +52,19 @@ export default function BasicInfo({ eventId, onEventId }){
       if (name === 'Jednodnevni') {
         next.KrajVreme = '';
       }
-      window.dispatchEvent(new CustomEvent('ne:basicinfo', {
-        detail: {
-          Kapacitet: Number(next.Beskonacno ? 9999999 : (next.Kapacitet || 0)),
-          Beskonacno: !!next.Beskonacno
-        }
-      }));
       return next;
     });
   }
-
+  useEffect(() => {
+    try {
+      window.dispatchEvent(new CustomEvent('ne:basicinfo', {
+        detail: {
+          Kapacitet: Number(form?.Beskonacno === true ? 9999999 : (form?.Kapacitet || 0)),
+          Beskonacno: form?.Beskonacno === true,
+        }
+      }));
+    } catch {}
+  }, [form?.Kapacitet, form?.Beskonacno]);
 
   function buildPayload(){
     const start = form.DatumPocetka ? new Date(form.DatumPocetka) : null;
@@ -138,15 +141,6 @@ export default function BasicInfo({ eventId, onEventId }){
       uploadImage(imgFile);
     }
   }, [deferredUpload, eventId, imgFile, busy]);
-
-  useEffect(() => {
-    window.dispatchEvent(new CustomEvent('ne:basicinfo', {
-      detail: {
-        Kapacitet: Number(form.Beskonacno ? 9999999 : (form.Kapacitet || 0)),
-        Beskonacno: !!form.Beskonacno
-      }
-    }));
-  }, [form.Beskonacno, form.Kapacitet]);
 
 
   useEffect(() => {
