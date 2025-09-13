@@ -1,0 +1,42 @@
+/* src/styles/NewEvent/basicinfo.css */
+
+/* --- postojeći ne-* blok (ostavljen) --- */
+.ne-container{max-width:960px;margin:0 auto;padding:24px;}
+.ne-title{font-size:24px;font-weight:600;margin-bottom:8px;}
+.ne-subtitle{opacity:.8;margin-bottom:16px;}
+.ne-section{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px;margin-bottom:16px;}
+.ne-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.ne-col-span-2{grid-column:span 2;}
+.ne-field{display:flex;flex-direction:column;gap:6px;}
+.ne-label{font-size:14px;opacity:.85;}
+.ne-input{padding:10px 12px;border:1px solid rgba(255,255,255,0.18);border-radius:8px;background:rgba(255,255,255,0.03);color:inherit;outline:none;}
+.ne-input:focus{border-color:#5aa9ff;box-shadow:0 0 0 2px rgba(90,169,255,.25)}
+.ne-inline{display:flex;align-items:center;gap:10px;}
+.ne-check{display:flex;align-items:center;gap:6px;font-size:14px;opacity:.85;}
+.ne-rt-toolbar{display:flex;gap:6px;margin-bottom:8px;}
+.ne-rt-toolbar button{border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.05);border-radius:8px;padding:6px 10px;cursor:pointer}
+.ne-rt-toolbar button:hover{background:rgba(255,255,255,0.08)}
+.ne-rt-editor{min-height:140px;border:1px dashed rgba(255,255,255,0.25);border-radius:10px;padding:10px;background:rgba(255,255,255,0.02);}
+.ne-rt-editor:empty:before{content:attr(data-placeholder);opacity:.4}
+.ne-upload{display:flex;gap:10px;align-items:center;margin-top:8px;}
+.ne-btn{border:1px solid rgba(255,255,255,0.18);padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.06);cursor:pointer}
+.ne-btn:disabled{opacity:.6;cursor:not-allowed}
+.ne-preview{margin-top:12px;}
+.ne-preview img{max-width:100%;height:auto;border-radius:10px;border:1px solid rgba(255,255,255,0.15)}
+.ne-alert{padding:10px 12px;border-radius:8px;margin-top:12px;}
+.ne-alert-error{background:rgba(255,0,0,0.08);border:1px solid rgba(255,0,0,0.25)}
+@media (max-width:800px){
+  .ne-grid{grid-template-columns:1fr;}
+  .ne-col-span-2{grid-column:span 1;}
+}
+
+/* --- dodatno za NOVI BasicInfo.jsx --- */
+.rt-toolbar{display:flex;gap:6px;margin-bottom:8px;}
+.rt-toolbar button{border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.05);border-radius:8px;padding:6px 10px;cursor:pointer}
+.rt-toolbar button:hover{background:rgba(255,255,255,0.08)}
+.rt-toolbar button.active{outline:2px solid rgba(90,169,255,.6);background:rgba(255,255,255,0.12)}
+.rt-editor{min-height:140px;border:1px dashed rgba(255,255,255,0.25);border-radius:10px;padding:10px;background:rgba(255,255,255,0.02);}
+.rt-editor:empty::before{content:attr(data-placeholder);opacity:.5}
+.img-thumb{width:240px;height:150px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,0.15)}
+.hidden{display:none !important;}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}

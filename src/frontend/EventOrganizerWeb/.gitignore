@@ -1,0 +1,41 @@
+# --- React (CRA) frontend ---
+
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# testing
+coverage/
+
+# production build output (CRA)
+build/
+
+# env files (keep example if you have one)
+.env
+.env.*
+!.env.example
+
+# caches
+.eslintcache
+.cache/
+.parcel-cache/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# editor/IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS
+.DS_Store
+Thumbs.db

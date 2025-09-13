@@ -1,0 +1,57 @@
+# --- .NET 8 backend ---
+
+# build artifacts
+bin/
+obj/
+out/
+publish/
+
+# Visual Studio/IDE
+.vs/
+.idea/
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# user-specific files
+*.user
+*.suo
+*.rsuser
+*.orig
+*.tmp
+*.bak
+*~
+*.Backup.*
+
+# logs & diagnostics
+logs/
+*.log
+TestResults/
+*.coverage
+*.coveragexml
+BenchmarkDotNet.Artifacts/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+**/packages/*
+
+# app settings (keep base files; ignore local/prod secrets)
+appsettings.*.Local.json
+appsettings.*.local.json
+appsettings.*.Production.json
+# If you keep secrets in Development, uncomment the next line:
+# appsettings.Development.json
+
+# launch profiles are often machine-specific
+Properties/launchSettings.json
+
+# optional: ignore runtime uploads (uncomment if applicable)
+# wwwroot/uploads/**
+# wwwroot/images/**
+# !wwwroot/images/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db

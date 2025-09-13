@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+html, body, #root { height: 100%; }
+body { @apply bg-bg text-white; }
+
+.form-card { @apply bg-bg-2 border border-white/10 rounded-xl2 p-6 shadow-soft; }
+.input { @apply w-full bg-bg-3 border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-primary; }
+.label { @apply text-sm text-white/80; }
+.btn { @apply px-4 py-2 rounded-xl2 font-medium transition active:scale-[.98]; }
+.btn-primary { @apply bg-primary hover:bg-primary/90 text-white; }
+.btn-subtle { @apply bg-white/10 hover:bg-white/15; }
+.link { @apply text-accent hover:underline; }
