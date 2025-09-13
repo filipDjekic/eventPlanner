@@ -110,10 +110,10 @@ namespace EventOrganizerAPI.Services
             if (!string.IsNullOrEmpty(dto.Kategorija))
                 update = update.Set(d => d.Kategorija, dto.Kategorija);
 
-            if (dto.Kapacitet.HasValue)                       // <—
+            if (dto.Kapacitet.HasValue)
                 update = update.Set(d => d.Kapacitet, dto.Kapacitet.Value);
 
-            if (dto.Karte != null)                            // <—
+            if (dto.Karte != null)
                 update = update.Set(d => d.Karte, dto.Karte);
 
             await _dogadjaji.UpdateOneAsync(filter, update);

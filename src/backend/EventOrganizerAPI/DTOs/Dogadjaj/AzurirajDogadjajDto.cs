@@ -17,8 +17,8 @@ namespace EventOrganizerAPI.DTOs.Dogadjaj
         public List<string>? Napomene { get; set; } = new List<string>();
         public List<string>? Resursi { get; set; } = new List<string>();
 
-        public int? Kapacitet { get; set; }            // <—
-        public List<string>? Karte { get; set; }       // <—
+        public int? Kapacitet { get; set; }
+        public List<string>? Karte { get; set; }
     }
 
 }
