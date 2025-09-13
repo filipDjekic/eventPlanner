@@ -40,7 +40,7 @@ namespace EventOrganizerAPI.Controllers
             return Ok(cenovnik);
         }
 
-        [HttpPut("azuriraj")]
+        [HttpPut("azuriraj/{id}")]
         [Authorize(Roles = "Organizator")]
         public async Task<IActionResult> Azuriraj([FromBody] AzurirajCenovnikDto dto)
         {

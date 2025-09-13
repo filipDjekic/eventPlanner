@@ -47,7 +47,7 @@ namespace EventOrganizerAPI.Controllers
             return karta != null ? Ok(karta) : NotFound();
         }
 
-        [HttpPut("azuriraj")]
+        [HttpPut("azuriraj/{id}")]
         public async Task<IActionResult> AzurirajKartu(AzurirajKartuDto dto)
         {
             await _kartaServis.AzurirajKartu(dto);

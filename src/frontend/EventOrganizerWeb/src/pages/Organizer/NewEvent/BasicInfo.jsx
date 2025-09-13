@@ -31,7 +31,9 @@ export default function BasicInfo({ eventId, onEventId }){
   // RTE
   const opisRef = useRef(null);
   const [rtState, setRtState] = useState({ b:false, i:false, u:false, ul:false });
+  const [deferredUpload, setDeferredUpload] = useState(false);
   const debounceRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   function nowLocalISO(){
     const d = new Date();
@@ -131,6 +133,23 @@ export default function BasicInfo({ eventId, onEventId }){
   }
 
   useEffect(() => {
+    if (deferredUpload && eventId && imgFile && !busy){
+      setDeferredUpload(false);
+      uploadImage(imgFile);
+    }
+  }, [deferredUpload, eventId, imgFile, busy]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('ne:basicinfo', {
+      detail: {
+        Kapacitet: Number(form.Beskonacno ? 9999999 : (form.Kapacitet || 0)),
+        Beskonacno: !!form.Beskonacno
+      }
+    }));
+  }, [form.Beskonacno, form.Kapacitet]);
+
+
+  useEffect(() => {
     if(debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       if(!auth?.id) return;
@@ -190,48 +209,31 @@ export default function BasicInfo({ eventId, onEventId }){
   }, []);
 
   function onFileChange(e){
-    const f = e.target.files?.[0];
-    setImgFile(f || null);
-    if(f){
-      const url = URL.createObjectURL(f);
-      setImgPreview(url);
+    const f = e.target.files?.[0] || null;
+    setImgFile(f);
+    setImgPreview(f ? URL.createObjectURL(f) : null);
+    if (!f) return;
+
+    if (eventId){
+      uploadImage(f);
     }else{
-      setImgPreview(null);
+      setDeferredUpload(true);
     }
+    e.target.value = '';
   }
 
-  async function ensureDraftId(){
-    if(eventId) return eventId;
-    if(!hasMinimum()){
-      toast.error('Popuni osnovne podatke pre dodavanja slike.');
-      return null;
-    }
-    try{
-      setBusy(true);
-      const created = await basicinfoApi.createDraft(buildPayload());
-      const id = created?.id || created?.Id || created;
-      if(id){
-        onEventId?.(id);
-        toast.success('Draft događaja je kreiran.');
-        return id;
-      }
-    }catch(err){
-      const msg = err?.response?.data || 'Greška pri čuvanju drafta.';
-      toast.error(typeof msg === 'string' ? msg : 'Greška pri čuvanju drafta.');
-      return null;
-    }finally{
-      setBusy(false);
-    }
-    return null;
-  }
+  async function uploadImage(fileArg){
+    const fileToUpload = fileArg || imgFile;
+    if (!fileToUpload){ toast.error('Izaberite sliku.'); return; }
 
-  async function uploadImage(){
-    if(!imgFile){ toast.error('Izaberite sliku.'); return; }
-    const id = await ensureDraftId();
-    if(!id) return;
+    const id = eventId;
+    if (!id){
+      return;
+    }
+
     try{
       setBusy(true);
-      await neweventApi.uploadImage(id, imgFile, '');
+      await neweventApi.uploadImage(id, fileToUpload, '');
       toast.success('Slika je sačuvana.');
     }catch(err){
       const msg = err?.response?.data || 'Greška pri uploadu slike.';
@@ -240,6 +242,7 @@ export default function BasicInfo({ eventId, onEventId }){
       setBusy(false);
     }
   }
+
 
   return (
     <div className="form-card space-y-5">
@@ -344,12 +347,27 @@ export default function BasicInfo({ eventId, onEventId }){
       {/* Slika DOLE ispod opisa, thumbnail prikaz */}
       <div className="space-y-2">
         <div className="label">Slika događaja</div>
-        <div className="flex items-center gap-3">
-          <input type="file" accept="image/*" onChange={onFileChange} disabled={busy} />
-          <button className="btn" onClick={uploadImage} disabled={busy || !imgFile}>
-            {busy ? 'Radim…' : 'Otpremi sliku'}
-          </button>
-        </div>
+
+        {/* Skriveni input — otvaramo ga klikom na dugme */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={onFileChange}
+          className="bi-file"        // sakriveno
+          disabled={busy}
+        />
+
+        {/* Jedino vidljivo dugme */}
+        <button
+          type="button"
+          className="btn bi-upload-btn"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={busy}
+        >
+          {busy ? 'Otpremam…' : 'Otpremi sliku'}
+        </button>
+
         {imgPreview && (
           <img className="img-thumb" src={imgPreview} alt="preview" />
         )}

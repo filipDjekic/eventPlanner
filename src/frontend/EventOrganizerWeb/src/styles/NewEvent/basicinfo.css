@@ -77,3 +77,17 @@
   cursor:not-allowed;
   background: rgba(255,255,255,0.06);
 }
+
+.bi-file{display:none;}
+.bi-upload-btn{
+  min-width:160px;
+  border:1px solid rgba(255,255,255,0.18);
+  border-radius:8px;
+  padding:8px 12px;
+  background:rgba(255,255,255,0.06);
+}
+.bi-upload-btn:hover{
+  background:rgba(255,255,255,0.10);
+  border-color:rgba(255,255,255,0.25);
+}
+.bi-upload-btn:disabled{opacity:.6;cursor:not-allowed;}
