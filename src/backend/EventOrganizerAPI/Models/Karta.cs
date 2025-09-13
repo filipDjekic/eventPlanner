@@ -13,7 +13,7 @@ namespace EventOrganizerAPI.Models
         public string Naziv { get; set; } = string.Empty;
         public string Opis { get; set; } = string.Empty;
         public string HEXboja { get; set; } = string.Empty;
-        public TipKarte Tip { get; set; }
+        public string Tip { get; set; }
         public string URLslike { get; set; } = string.Empty;
         public decimal Cena { get; set; }
         public int BrojKarata { get; set; }

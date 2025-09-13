@@ -1,6 +1,6 @@
 // src/pages/Organizer/NewEvent/BasicInfo.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import '../../../styles/NewEvent/basicinfo.css';
+import '../../../styles/NewEvent/basicinfo.css'; // FIX: one more ../
 import toast from 'react-hot-toast';
 import { getAuth } from '../../../utils/auth';
 import * as basicinfoApi from '../../../services/basicinfoapi';
@@ -32,45 +32,6 @@ export default function BasicInfo({ eventId, onEventId }){
   const opisRef = useRef(null);
   const [rtState, setRtState] = useState({ b:false, i:false, u:false, ul:false });
   const debounceRef = useRef(null);
-  // Derived min for end time in 'Jednodnevni' mode
-  const endTimeMin = React.useMemo(() => {
-    if(!form.DatumPocetka) return '';
-    const d = new Date(form.DatumPocetka);
-    const hh = String(d.getHours()).padStart(2,'0');
-    const mm = String(d.getMinutes()).padStart(2,'0');
-    return `${hh}:${mm}`;
-  }, [form.DatumPocetka]);
-  const shownRef = useRef(false);
-
-  function extractId(obj){
-    if(!obj) return null;
-    const cands = [obj.id, obj.Id, obj._id, obj.eventId, obj.dogadjajId, obj?.value?.id, obj?.value?.Id, obj?.value?._id, obj?._id?.$oid];
-    for (const v of cands){ if (typeof v === 'string' && v) return v; }
-    if (typeof obj === 'string') return obj;
-    return null;
-  }
-  function extractId(obj){
-    if(!obj) return null;
-    const cand = [
-      obj.id, obj.Id, obj._id, obj.eventId, obj.dogadjajId,
-      obj.value?.id, obj.value?.Id, obj.value?._id, obj?._id?.$oid
-    ];
-    for(const v of cand){
-      if(typeof v === 'string' && v) return v;
-    }
-    return null;
-  }
-
-  // Hidden file input
-  const fileInputRef = useRef(null);
-
-  function localISO(date){
-    if(!date) return '';
-    const d = new Date(date);
-    const tzOffset = d.getTimezoneOffset();
-    const local = new Date(d.getTime() - tzOffset*60000);
-    return local.toISOString().slice(0,16);
-  }
 
   function nowLocalISO(){
     const d = new Date();
@@ -83,15 +44,22 @@ export default function BasicInfo({ eventId, onEventId }){
     const { name, type, checked, value } = e.target;
     setForm(prev => {
       const next = { ...prev, [name]: type === 'checkbox' ? checked : value };
-      if(name === 'Beskonacno'){
-        next.Kapacitet = checked ? '9999999' : '';
+      if (name === 'Beskonacno') {
+        next.Kapacitet = checked ? '9999999' : next.Kapacitet;
       }
-      if(name === 'Jednodnevni'){
+      if (name === 'Jednodnevni') {
         next.KrajVreme = '';
       }
+      window.dispatchEvent(new CustomEvent('ne:basicinfo', {
+        detail: {
+          Kapacitet: Number(next.Beskonacno ? 9999999 : (next.Kapacitet || 0)),
+          Beskonacno: !!next.Beskonacno
+        }
+      }));
       return next;
     });
   }
+
 
   function buildPayload(){
     const start = form.DatumPocetka ? new Date(form.DatumPocetka) : null;
@@ -107,6 +75,7 @@ export default function BasicInfo({ eventId, onEventId }){
 
     return {
       Id: (eventId || null),
+      Beskonacno: !!form.Beskonacno,
       Naziv: form.Naziv.trim(),
       Lokacija: form.Lokacija.trim(),
       DatumPocetka: start ? start.toISOString() : null,
@@ -119,6 +88,14 @@ export default function BasicInfo({ eventId, onEventId }){
       OrganizatorId: auth?.id ?? null,
     };
   }
+
+  const endTimeMin = React.useMemo(() => {
+    if(!form.DatumPocetka) return '';
+    const d = new Date(form.DatumPocetka);
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    return `${hh}:${mm}`;
+  }, [form.DatumPocetka]);
 
   function hasMinimum(){
     if(!form.Naziv?.trim()) return false;
@@ -164,12 +141,10 @@ export default function BasicInfo({ eventId, onEventId }){
         setBusy(true);
         if(!eventId){
           const created = await basicinfoApi.createDraft(payload);
-          const id = extractId(created);
+          const id = created?.id || created?.Id || created;
           if(id){
             onEventId?.(id);
-            if(!shownRef.current){ toast.success('Draft događaja je kreiran.'); shownRef.current = true; }
-          } else {
-            if(!shownRef.current){ toast.success('Draft događaja je kreiran.'); shownRef.current = true; }
+            toast.success('Draft događaja je kreiran.');
           }
         }else{
           await basicinfoApi.updateDraft(eventId, payload);
@@ -234,14 +209,11 @@ export default function BasicInfo({ eventId, onEventId }){
     try{
       setBusy(true);
       const created = await basicinfoApi.createDraft(buildPayload());
-      const id = extractId(created);
+      const id = created?.id || created?.Id || created;
       if(id){
         onEventId?.(id);
-        if(!shownRef.current){ toast.success('Draft događaja je kreiran.'); shownRef.current = true; }
+        toast.success('Draft događaja je kreiran.');
         return id;
-      } else {
-        if(!shownRef.current){ toast.success('Draft događaja je kreiran.'); shownRef.current = true; }
-        return null;
       }
     }catch(err){
       const msg = err?.response?.data || 'Greška pri čuvanju drafta.';
@@ -269,115 +241,118 @@ export default function BasicInfo({ eventId, onEventId }){
     }
   }
 
-  function onUploadClick(){
-    if(!imgFile){
-      fileInputRef.current?.click();
-    }else{
-      uploadImage();
-    }
-  }
-
   return (
-    <div className="mx-auto max-w-5xl"> {/* malo šire */}
-      <div className="form-card space-y-5">
-        {/* Naziv / Lokacija */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="block">
-            <div className="label mb-1">Naziv *</div>
-            <input className="input" name="Naziv" value={form.Naziv} onChange={onChange} placeholder="npr. Summer Fest 2026" />
-          </label>
-          <label className="block">
-            <div className="label mb-1">Lokacija *</div>
-            <input className="input" name="Lokacija" value={form.Lokacija} onChange={onChange} placeholder="npr. Rim, Italija" />
-          </label>
-        </div>
+    <div className="form-card space-y-5">
+      {/* Naziv / Lokacija */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label className="block">
+          <div className="label mb-1">Naziv *</div>
+          <input className="input" name="Naziv" value={form.Naziv} onChange={onChange} placeholder="npr. Summer Fest 2026" />
+        </label>
+        <label className="block">
+          <div className="label mb-1">Lokacija *</div>
+          <input className="input" name="Lokacija" value={form.Lokacija} onChange={onChange} placeholder="npr. Rim, Italija" />
+        </label>
+      </div>
 
-        {/* Datumi u istom redu; checkbox ispod početka */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block">
-              <div className="label mb-1">Datum početka *</div>
-              <input type="datetime-local" className="input" name="DatumPocetka" min={nowLocalISO()} value={form.DatumPocetka} onChange={onChange} />
-            </label>
-            <label className="label mt-2 flex items-center gap-2">
-              <input type="checkbox" name="Jednodnevni" checked={form.Jednodnevni} onChange={onChange} />
-              Jednodnevni
-            </label>
-          </div>
+      {/* Datumi u istom redu; checkbox ispod početka */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
           <label className="block">
-            <div className="label mb-1">{form.Jednodnevni ? 'Vreme završetka *' : 'Datum kraja *'}</div>
-            {form.Jednodnevni ? (
-              <input type="time" className="input" name="KrajVreme" value={form.KrajVreme} onChange={onChange}
-              min={endTimeMin || undefined} disabled={!form.DatumPocetka} />
-            ) : (
-              <input type="datetime-local" className="input" name="DatumKraja" value={form.DatumKraja} onChange={onChange}
-              min={form.DatumPocetka ? form.DatumPocetka : undefined} disabled={!form.DatumPocetka} />
-            )}
+            <div className="label mb-1">Datum početka *</div>
+            <input type="datetime-local" className="input" name="DatumPocetka" min={nowLocalISO()} value={form.DatumPocetka} onChange={onChange} />
+          </label>
+          <label className="label mt-2 flex items-center gap-2">
+            <input type="checkbox" name="Jednodnevni" checked={form.Jednodnevni} onChange={onChange} />
+            Jednodnevni
           </label>
         </div>
-
-        {/* Kapacitet / Kategorija */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <div className="label mb-1">Kapacitet {form.Beskonacno ? '(beskonačno)' : '*'}</div>
-            <div className="flex items-center gap-3">
-              <input type="number" className="input bi-capacity" name="Kapacitet" min="0" disabled={form.Beskonacno} value={form.Kapacitet} onChange={onChange} placeholder="npr. 1000" />
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="Beskonacno" checked={form.Beskonacno} onChange={onChange} />
-                beskonačno
-              </label>
-            </div>
-          </div>
-          <label className="block">
-            <div className="label mb-1">Kategorija *</div>
-            <select className="input" name="Kategorija" value={form.Kategorija} onChange={onChange}>
-              <option value="">— izaberi —</option>
-              {KATEGORIJE.map(k => <option key={k} value={k}>{k}</option>)}
-            </select>
-          </label>
-        </div>
-
-        {/* Opis (RTE) */}
-        <div className="space-y-2">
-          <div className="label">Opis *</div>
-          <div className="rt-toolbar">
-            <button type="button" className={rtState.b ? 'active' : ''} onClick={() => cmd('bold')}><b>B</b></button>
-            <button type="button" className={rtState.i ? 'active' : ''} onClick={() => cmd('italic')}><i>I</i></button>
-            <button type="button" className={rtState.u ? 'active' : ''} onClick={() => cmd('underline')}><u>U</u></button>
-            <button type="button" className={rtState.ul ? 'active' : ''} onClick={() => cmd('insertUnorderedList')}>• lista</button>
-          </div>
-          <div
-            ref={opisRef}
-            className="input min-h-[140px] rt-editor"
-            contentEditable
-            onInput={opisOnInput}
-            data-placeholder="Kratak opis događaja…"
-          />
-        </div>
-
-        {/* Slika: sakriven file input + jedno dugme (izaberi/otpremi) */}
-        <div className="space-y-2">
-          <div className="label">Slika događaja</div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={onFileChange}
-            className="bi-file"
-          />
-
-          <div className="flex items-center gap-3">
-            <button className="btn bi-upload-btn" onClick={onUploadClick} disabled={busy}>
-              {busy ? 'Radim…' : (imgFile ? 'Otpremi sliku' : 'Izaberi sliku')}
-            </button>
-            {imgFile && <span className="text-sm opacity-80 truncate max-w-[220px]">{imgFile.name}</span>}
-          </div>
-
-          {imgPreview && (
-            <img className="img-thumb" src={imgPreview} alt="preview" />
+        <label className="block">
+          <div className="label mb-1">{form.Jednodnevni ? 'Vreme završetka *' : 'Datum kraja *'}</div>
+          {form.Jednodnevni ? (
+            <input
+              type="time"
+              className="input"
+              name="KrajVreme"
+              value={form.KrajVreme}
+              onChange={onChange}
+              disabled={!form.DatumPocetka}           // 🔒 ne može dok nema početka
+              min={endTimeMin || undefined}           // ⛳ ne može pre vremena početka
+            />
+          ) : (
+            <input
+              type="datetime-local"
+              className="input"
+              name="DatumKraja"
+              value={form.DatumKraja}
+              onChange={onChange}
+              disabled={!form.DatumPocetka}           // 🔒 ne može dok nema početka
+              min={form.DatumPocetka || undefined}    // ⛳ ne može pre početka
+            />
           )}
+        </label>
+      </div>
+
+      {/* Kapacitet / Kategorija */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div className="label mb-1">Kapacitet {form.Beskonacno ? '(beskonačno)' : '*'}</div>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              className="input bi-capacity"
+              name="Kapacitet"
+              min="0"
+              disabled={form.Beskonacno}    // 🔒 zaključan kada je “beskonačno”
+              value={form.Kapacitet}
+              onChange={onChange}
+              placeholder='npr. 1000'
+            />
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="Beskonacno" checked={form.Beskonacno} onChange={onChange} />
+              beskonačno
+            </label>
+          </div>
         </div>
+        <label className="block">
+          <div className="label mb-1">Kategorija *</div>
+          <select className="input" name="Kategorija" value={form.Kategorija} onChange={onChange}>
+            <option value="">— izaberi —</option>
+            {KATEGORIJE.map(k => <option key={k} value={k}>{k}</option>)}
+          </select>
+        </label>
+      </div>
+
+      {/* Opis (RTE) */}
+      <div className="space-y-2">
+        <div className="label">Opis *</div>
+        <div className="rt-toolbar">
+          <button type="button" className={rtState.b ? 'active' : ''} onClick={() => cmd('bold')}><b>B</b></button>
+          <button type="button" className={rtState.i ? 'active' : ''} onClick={() => cmd('italic')}><i>I</i></button>
+          <button type="button" className={rtState.u ? 'active' : ''} onClick={() => cmd('underline')}><u>U</u></button>
+          <button type="button" className={rtState.ul ? 'active' : ''} onClick={() => cmd('insertUnorderedList')}>• lista</button>
+        </div>
+        <div
+          ref={opisRef}
+          className="input min-h-[140px] rt-editor"
+          contentEditable
+          onInput={opisOnInput}
+          data-placeholder="Kratak opis događaja…"
+        />
+      </div>
+
+      {/* Slika DOLE ispod opisa, thumbnail prikaz */}
+      <div className="space-y-2">
+        <div className="label">Slika događaja</div>
+        <div className="flex items-center gap-3">
+          <input type="file" accept="image/*" onChange={onFileChange} disabled={busy} />
+          <button className="btn" onClick={uploadImage} disabled={busy || !imgFile}>
+            {busy ? 'Radim…' : 'Otpremi sliku'}
+          </button>
+        </div>
+        {imgPreview && (
+          <img className="img-thumb" src={imgPreview} alt="preview" />
+        )}
       </div>
     </div>
   );

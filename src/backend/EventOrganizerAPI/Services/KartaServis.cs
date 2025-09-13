@@ -28,7 +28,7 @@ namespace EventOrganizerAPI.Services
                 Naziv = dto.Naziv,
                 Opis = dto.Opis,
                 HEXboja = dto.HEXboja,
-                Tip = (TipKarte)System.Enum.Parse(typeof(TipKarte), dto.Tip),
+                Tip = dto.Tip,
                 URLslike = dto.URLslike,
                 Cena = dto.Cena,
                 BrojKarata = dto.BrojKarata,
@@ -51,7 +51,7 @@ namespace EventOrganizerAPI.Services
             var karte = await _karte.Find(k => k.DogadjajId == dogadjajId).ToListAsync();
 
             return karte.Count == 0
-                ? new Karta { Naziv = "Besplatna", Tip = TipKarte.Besplatna, Cena = 0, BrojKarata = int.MaxValue }
+                ? new Karta { Naziv = "Besplatna", Tip = "besplatna", Cena = 0, BrojKarata = int.MaxValue }
                 : karte[0];
         }
         public async Task<KupljenaKarta> VratiKupljenuKartuPoId(string id)

@@ -1,9 +1,11 @@
 // src/pages/Organizer/NewEvent/NewEvent.jsx
 import React, { useState } from 'react';
 import BasicInfo from './BasicInfo';
+import Tickets from './Tickets';
 
 export default function NewEvent(){
   const [eventId, setEventId] = useState(null);
+  
 
   return (
     <div className="ne-container">
@@ -14,6 +16,7 @@ export default function NewEvent(){
         eventId={eventId}
         onEventId={(id) => setEventId(id)}
       />
+      <Tickets eventId={eventId} />
 
       {/* Sledeće podforme će se dodavati ispod, i dobiće eventId kada nastane */}
     </div>

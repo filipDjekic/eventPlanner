@@ -1,0 +1,33 @@
+/* src/styles/NewEvent/tickets.css */
+
+/* Wrapper i header */
+.tk-wrap{margin: 5% 0%;}
+.tk-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.tk-add{}
+
+/* Info poruka */
+.tk-note{margin-bottom:10px; opacity:.85}
+
+/* Lista i kartice */
+.tk-list{display:flex;flex-direction:column;gap:12px;}
+.tk-card{border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:12px;background:rgba(255,255,255,0.04);}
+.tk-locked{opacity:.9}
+.tk-grid{display:grid;grid-template-columns:repeat(5, minmax(0,1fr)); gap:12px}
+@media (max-width: 1024px){
+  .tk-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (max-width: 640px){
+  .tk-grid{grid-template-columns:1fr;}
+}
+
+/* Boja */
+.tk-color-row{display:flex;align-items:center;gap:10px;}
+.tk-color-input{padding:0.25rem 0.5rem; height:40px}
+.tk-swatch{width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.2)}
+
+/* Akcije */
+.tk-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px;}
+
+/* Disabled vizuelno kad je beskonačno ili nema ID-a */
+.tk-card input:disabled,
+.tk-card select:disabled{opacity:.6;cursor:not-allowed;background:rgba(255,255,255,0.06)}
