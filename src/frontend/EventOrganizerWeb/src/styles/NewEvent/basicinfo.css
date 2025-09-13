@@ -38,5 +38,35 @@
 .rt-editor{min-height:140px;border:1px dashed rgba(255,255,255,0.25);border-radius:10px;padding:10px;background:rgba(255,255,255,0.02);}
 .rt-editor:empty::before{content:attr(data-placeholder);opacity:.5}
 .img-thumb{width:240px;height:150px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,0.15)}
-.hidden{display:none !important;}
-.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+
+
+/* Scoped hidden input so it doesn't nuke Tailwind's .hidden */
+.bi-file{display:none;}
+/* --- Upload dugme (lokalno za BasicInfo) --- */
+.bi-upload-btn{
+  min-width: 160px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.06);
+}
+
+.bi-upload-btn:hover{
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.25);
+}
+
+.bi-upload-btn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+
+
+/* Disabled look for capacity when 'beskonačno' */
+.bi-capacity:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+  background: rgba(255,255,255,0.06);
+}

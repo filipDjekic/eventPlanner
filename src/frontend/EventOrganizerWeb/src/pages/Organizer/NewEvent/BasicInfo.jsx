@@ -1,6 +1,6 @@
 // src/pages/Organizer/NewEvent/BasicInfo.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import '../../../styles/NewEvent/basicinfo.css'; // FIX: one more ../
+import '../../../styles/NewEvent/basicinfo.css';
 import toast from 'react-hot-toast';
 import { getAuth } from '../../../utils/auth';
 import * as basicinfoApi from '../../../services/basicinfoapi';
@@ -32,9 +32,38 @@ export default function BasicInfo({ eventId, onEventId }){
   const opisRef = useRef(null);
   const [rtState, setRtState] = useState({ b:false, i:false, u:false, ul:false });
   const debounceRef = useRef(null);
+  // Derived min for end time in 'Jednodnevni' mode
+  const endTimeMin = React.useMemo(() => {
+    if(!form.DatumPocetka) return '';
+    const d = new Date(form.DatumPocetka);
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    return `${hh}:${mm}`;
+  }, [form.DatumPocetka]);
+  const shownRef = useRef(false);
 
-  // Hidden file input (da sakrijemo "Choose file")
+  function extractId(obj){
+    if(!obj) return null;
+    const cand = [
+      obj.id, obj.Id, obj._id, obj.eventId, obj.dogadjajId,
+      obj.value?.id, obj.value?.Id, obj.value?._id, obj?._id?.$oid
+    ];
+    for(const v of cand){
+      if(typeof v === 'string' && v) return v;
+    }
+    return null;
+  }
+
+  // Hidden file input
   const fileInputRef = useRef(null);
+
+  function localISO(date){
+    if(!date) return '';
+    const d = new Date(date);
+    const tzOffset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - tzOffset*60000);
+    return local.toISOString().slice(0,16);
+  }
 
   function nowLocalISO(){
     const d = new Date();
@@ -127,10 +156,12 @@ export default function BasicInfo({ eventId, onEventId }){
         setBusy(true);
         if(!eventId){
           const created = await basicinfoApi.createDraft(payload);
-          const id = created?.id || created?.Id || created;
+          const id = extractId(created);
           if(id){
             onEventId?.(id);
-            toast.success('Draft događaja je kreiran.');
+            if(!shownRef.current){ toast.success('Draft događaja je kreiran.'); shownRef.current = true; }
+          } else {
+            if(!shownRef.current){ toast.success('Draft događaja je kreiran.'); shownRef.current = true; }
           }
         }else{
           await basicinfoApi.updateDraft(eventId, payload);
@@ -195,11 +226,14 @@ export default function BasicInfo({ eventId, onEventId }){
     try{
       setBusy(true);
       const created = await basicinfoApi.createDraft(buildPayload());
-      const id = created?.id || created?.Id || created;
+      const id = extractId(created);
       if(id){
         onEventId?.(id);
-        toast.success('Draft događaja je kreiran.');
+        if(!shownRef.current){ toast.success('Draft događaja je kreiran.'); shownRef.current = true; }
         return id;
+      } else {
+        if(!shownRef.current){ toast.success('Draft događaja je kreiran.'); shownRef.current = true; }
+        return null;
       }
     }catch(err){
       const msg = err?.response?.data || 'Greška pri čuvanju drafta.';
@@ -227,7 +261,6 @@ export default function BasicInfo({ eventId, onEventId }){
     }
   }
 
-  // Jedno dugme: ako nema fajla -> otvara file picker; ako ima -> otprema
   function onUploadClick(){
     if(!imgFile){
       fileInputRef.current?.click();
@@ -237,7 +270,7 @@ export default function BasicInfo({ eventId, onEventId }){
   }
 
   return (
-    <div className="mx-auto max-w-4xl"> {/* malo šire, ne preko cele širine */}
+    <div className="mx-auto max-w-5xl"> {/* malo šire */}
       <div className="form-card space-y-5">
         {/* Naziv / Lokacija */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -266,9 +299,11 @@ export default function BasicInfo({ eventId, onEventId }){
           <label className="block">
             <div className="label mb-1">{form.Jednodnevni ? 'Vreme završetka *' : 'Datum kraja *'}</div>
             {form.Jednodnevni ? (
-              <input type="time" className="input" name="KrajVreme" value={form.KrajVreme} onChange={onChange} />
+              <input type="time" className="input" name="KrajVreme" value={form.KrajVreme} onChange={onChange}
+              min={endTimeMin || undefined} disabled={!form.DatumPocetka} />
             ) : (
-              <input type="datetime-local" className="input" name="DatumKraja" value={form.DatumKraja} onChange={onChange} />
+              <input type="datetime-local" className="input" name="DatumKraja" value={form.DatumKraja} onChange={onChange}
+              min={form.DatumPocetka ? form.DatumPocetka : undefined} disabled={!form.DatumPocetka} />
             )}
           </label>
         </div>
@@ -278,7 +313,7 @@ export default function BasicInfo({ eventId, onEventId }){
           <div>
             <div className="label mb-1">Kapacitet {form.Beskonacno ? '(beskonačno)' : '*'}</div>
             <div className="flex items-center gap-3">
-              <input type="number" className="input" name="Kapacitet" min="0" disabled={form.Beskonacno} value={form.Kapacitet} onChange={onChange} placeholder="npr. 1000" />
+              <input type="number" className="input bi-capacity" name="Kapacitet" min="0" disabled={form.Beskonacno} value={form.Kapacitet} onChange={onChange} placeholder="npr. 1000" />
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="Beskonacno" checked={form.Beskonacno} onChange={onChange} />
                 beskonačno
@@ -312,21 +347,20 @@ export default function BasicInfo({ eventId, onEventId }){
           />
         </div>
 
-        {/* Slika (bez vidljivog "Choose file") */}
+        {/* Slika: sakriven file input + jedno dugme (izaberi/otpremi) */}
         <div className="space-y-2">
           <div className="label">Slika događaja</div>
 
-          {/* sakriven input */}
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
             onChange={onFileChange}
-            className="hidden"
+            className="bi-file"
           />
 
           <div className="flex items-center gap-3">
-            <button className="btn" onClick={onUploadClick} disabled={busy}>
+            <button className="btn bi-upload-btn" onClick={onUploadClick} disabled={busy}>
               {busy ? 'Radim…' : (imgFile ? 'Otpremi sliku' : 'Izaberi sliku')}
             </button>
             {imgFile && <span className="text-sm opacity-80 truncate max-w-[220px]">{imgFile.name}</span>}
