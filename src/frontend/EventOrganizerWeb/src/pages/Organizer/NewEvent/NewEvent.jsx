@@ -5,6 +5,8 @@ import Tickets from './Tickets';
 
 export default function NewEvent(){
   const [eventId, setEventId] = useState(null);
+  const [capFromBasic, setCapFromBasic] = useState(null);
+  const [infFromBasic, setInfFromBasic] = useState(false);
   
 
   return (
@@ -15,8 +17,12 @@ export default function NewEvent(){
       <BasicInfo
         eventId={eventId}
         onEventId={(id) => setEventId(id)}
+        onBasicInfoChange={({ capacity, infinite }) => {
+          setCapFromBasic(capacity);
+          setInfFromBasic(!!infinite);
+        }}
       />
-      <Tickets eventId={eventId} />
+      <Tickets eventId={eventId} initialCapacity={capFromBasic} initialInfinite={infFromBasic} />
 
       {/* Sledeće podforme će se dodavati ispod, i dobiće eventId kada nastane */}
     </div>

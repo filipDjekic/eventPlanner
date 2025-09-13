@@ -13,12 +13,22 @@ function totalQty(list){
   return (list || []).reduce((acc, t) => acc + (Number(t.BrojKarata || 0) || 0), 0);
 }
 
-export default function Tickets({ eventId }){
+export default function Tickets({ eventId, initialCapacity, initialInfinite }){
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [tickets, setTickets] = useState([]); // {localId, Id?, Naziv, Tip, Cena, BrojKarata, Boja, locked}
   const [capacity, setCapacity] = useState(null);
   const [infinite, setInfinite] = useState(false);
+
+  // sync from NewEvent props (parent state) first
+  useEffect(() => {
+    if (typeof initialCapacity === 'number') {
+      setCapacity(Number.isFinite(initialCapacity) && initialCapacity > 0 ? initialCapacity : null);
+    }
+    if (typeof initialInfinite === 'boolean') {
+      setInfinite(initialInfinite === true);
+    }
+  }, [initialCapacity, initialInfinite]);
   // Sync sa BasicInfo preko custom eventa (bez localStorage fallback-a)
   useEffect(() => {
     function onInfo(e){
@@ -44,8 +54,9 @@ export default function Tickets({ eventId }){
         setLoading(true);
         // koristimo postojeći newEventApi sloj (ne direktne rute)
         const ev = await neweventApi.getById(eventId);
-        setCapacity(Number(ev?.Kapacitet ?? 0));
-        setInfinite(Boolean(ev?.Beskonacno));
+        const capFromBE = Number(ev?.Kapacitet);
+        setCapacity(Number.isFinite(capFromBE) && capFromBE > 0 ? capFromBE : (initialCapacity ?? null));
+        setInfinite(typeof ev?.Beskonacno === 'boolean' ? ev.Beskonacno : (initialInfinite === true));
 
         // Učitaj karte ako backend podržava listing
         let normalized = [];

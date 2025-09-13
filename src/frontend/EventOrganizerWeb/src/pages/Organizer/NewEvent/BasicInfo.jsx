@@ -8,7 +8,7 @@ import * as neweventApi from '../../../services/newEventApi';
 
 const KATEGORIJE = ['utakmica', 'protest', 'vašar', 'žurka', 'festival', 'ostalo'];
 
-export default function BasicInfo({ eventId, onEventId }){
+export default function BasicInfo({ eventId, onEventId, onBasicInfoChange }){
   const auth = useMemo(() => getAuth?.() ?? {}, []);
 
   const [form, setForm] = useState({
@@ -63,6 +63,7 @@ export default function BasicInfo({ eventId, onEventId }){
           Beskonacno: form?.Beskonacno === true,
         }
       }));
+      try { onBasicInfoChange?.({ capacity: Number(form?.Beskonacno === true ? 9999999 : (form?.Kapacitet || 0)), infinite: form?.Beskonacno === true }); } catch {}
     } catch {}
   }, [form?.Kapacitet, form?.Beskonacno]);
 
