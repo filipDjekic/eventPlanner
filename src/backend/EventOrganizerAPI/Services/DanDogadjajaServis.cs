@@ -63,7 +63,17 @@ namespace EventOrganizerAPI.Services
             await _dani.UpdateOneAsync(d => d.Id == id, update);
         }
 
-        public async Task Obrisi(string id) =>
+        public async Task Obrisi(string id)
+        {
+            var dan = await _dani.Find(d => d.Id == id).FirstOrDefaultAsync();
             await _dani.DeleteOneAsync(d => d.Id == id);
+
+            if (dan != null && !string.IsNullOrEmpty(dan.Dogadjaj))
+            {
+                var f = Builders<Dogadjaj>.Filter.Eq(d => d.Id, dan.Dogadjaj);
+                var u = Builders<Dogadjaj>.Update.Pull(d => d.Dani, id);
+                await _dogadjaji.UpdateOneAsync(f, u);
+            }
+        }
     }
 }
