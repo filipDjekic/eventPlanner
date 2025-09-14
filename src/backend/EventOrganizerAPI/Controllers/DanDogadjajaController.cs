@@ -58,6 +58,7 @@ namespace EventOrganizerAPI.Controllers
             await _servis.ObrisiSveZaDogadjaj(dogadjajId);
             return NoContent();
         }
+
         [HttpGet("vrati-sve-za-dogadjaj/{dogadjajId}")]
         public async Task<IActionResult> VratiSveZaDogadjaj(string dogadjajId)
         {

@@ -27,7 +27,11 @@ export async function remove(id){
 export async function removeAllForEvent(eventId){
   await api.delete(`dani/obrisi-za-dogadjaj/${eventId}`);
 }
-export async function listForEventApi(eventId){
+export async function listForEventApi(eventId) {
   const { data } = await api.get(`dani/vrati-sve-za-dogadjaj/${eventId}`);
+  return Array.isArray(data) ? data : [];
+}
+export async function listAll(){
+  const { data } = await api.get('dani/vrati-sve'); // dodaj '/api/' ako ti baseURL NIJE '/api'
   return Array.isArray(data) ? data : [];
 }

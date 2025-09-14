@@ -19,7 +19,6 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpPost("kreiraj")]
-        [Authorize(Roles = "Organizator")]
         public async Task<IActionResult> KreirajPodrucje([FromBody] PodrucjeKreirajDto dto)
         {
             var novoPodrucje = await _podrucjeServis.KreirajPodrucjeAsync(dto);
@@ -41,7 +40,6 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpPut("azuriraj/{id}")]
-        [Authorize(Roles = "Organizator")]
         public async Task<IActionResult> AzurirajPodrucje(string id, [FromBody] PodrucjeAzurirajDto dto)
         {
             if (id != dto.Id) return BadRequest("ID u URL-u i DTO se ne poklapaju.");
@@ -53,7 +51,6 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpDelete("obrisi/{id}")]
-        [Authorize(Roles = "Organizator")]
         public async Task<IActionResult> ObrisiPodrucje(string id)
         {
             var uspesno = await _podrucjeServis.ObrisiPodrucjeAsync(id);

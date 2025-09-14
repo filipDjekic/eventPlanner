@@ -64,7 +64,7 @@ export default function Days({ eventId }){
 
   const disabledAll = !eventId;
 
-  // Helpers
+  // Helpers 
   function atMidnight(date){
     const d = new Date(date);
     d.setHours(0,0,0,0);

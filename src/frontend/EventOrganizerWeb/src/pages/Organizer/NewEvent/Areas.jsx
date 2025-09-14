@@ -21,17 +21,47 @@ export default function Areas({ eventId }){
       if (!eventId){ setAreas([]); setDays([]); return; }
       try{
         setLoading(true);
-        // 1) Dani za event (ev.Dani -> resolve by id)
-        let dayIds = await daysApi.getForEvent(eventId); // može vratiti niz stringova
-        if (Array.isArray(dayIds) && dayIds.length && typeof dayIds[0] === 'string'){
-          const resolved = await Promise.all(dayIds.map(id => daysApi.getById(id).catch(()=>null)));
-          dayIds = resolved.filter(Boolean);
+        // 1) DANI — novi endpoint, pa fallback
+        let rawDays = [];
+
+        // 1) direktno sa bekenda po eventId
+        try {
+          rawDays = await daysApi.listForEventApi(eventId); // dani/vrati-sve-za-dogadjaj/{eventId}
+        } catch {}
+
+        // 2) fallback: vrati-sve → filtriraj po Dogadjaj === eventId
+        if (!Array.isArray(rawDays) || rawDays.length === 0) {
+          try {
+            const all = await daysApi.listAll();
+            rawDays = (all || []).filter(d => (d?.Dogadjaj ?? d?.dogadjaj) === eventId);
+          } catch {}
         }
-        const dayObjs = (Array.isArray(dayIds)? dayIds:[]).map((d,i)=>({
-          Id: d?.Id || d?.id || d?._id,
-          Naziv: d?.Naziv || `Dan ${i+1}`,
-          DatumOdrzavanja: normalizeDateString(d?.DatumOdrzavanja),
-        })).filter(x=>x.Id);
+
+        // 3) poslednja opcija: iz područja izvuci jedinstvene DanId, pa resolve-uj
+        if (!Array.isArray(rawDays) || rawDays.length === 0) {
+          try {
+            const allAreas = await areasApi.getAll(); // podrucja/vrati-sve
+            const dayIds = [...new Set(
+              (allAreas || [])
+                .filter(a => (a?.DogadjajId ?? a?.dogadjajId) === eventId)
+                .map(a => a?.DanId ?? a?.danId)
+            )].filter(Boolean);
+
+            const resolved = await Promise.all(dayIds.map(id => daysApi.getById(id).catch(() => null)));
+            rawDays = resolved.filter(Boolean);
+          } catch {}
+        }
+
+        // mapiranje u shape za dropdown
+        const dayObjs = (rawDays || []).map((d,i) => ({
+          Id: d?.Id ?? d?._id ?? d?.id ?? d?.ID ?? d?._id?.$oid,
+          Naziv: d?.Naziv ?? d?.naziv ?? `Dan ${i+1}`,
+          DatumOdrzavanja: normalizeDateString(d?.DatumOdrzavanja ?? d?.datumOdrzavanja ?? d?.datum),
+        })).filter(x => !!x.Id);
+
+        setDays(dayObjs.sort((a,b)=> (Date.parse(a.DatumOdrzavanja||'')||0) - (Date.parse(b.DatumOdrzavanja||'')||0)));
+
+        
         // 2) Postojeća područja
         const existing = await areasApi.getForEvent(eventId);
         const mapped = (existing||[]).map((a, idx) => ({
@@ -107,10 +137,6 @@ export default function Areas({ eventId }){
       return;
     }
     // Sačuvaj (create/update)
-    if (!a.Naziv?.trim()){
-      toast.error('Unesi naziv područja.');
-      return;
-    }
     if (!a.DanId){
       toast.error('Izaberi dan.');
       return;
@@ -284,13 +310,24 @@ function AreaCard({ idx, area, days, disabledAll, onField, onToggleLock, onDelet
       </div>
 
       {showMap && (
-        <MapEditor
+        <MapEditorLeaflet
           color={fixColor(area.HEXboja||'#00aaff')}
           name={area.Naziv||''}
-          points={area.Koordinate||[]}
-          setPoints={(pts)=>onField(idx,'Koordinate', pts)}
+          initialPoints={Array.isArray(area.Koordinate) ? area.Koordinate : []} // lokalni draft ulaz
           locked={disabledAll || area._locked}
-          existingPolys={(existingOnSameDay||[]).map(x=>({ color:fixColor(x.HEXboja||'#00aaff'), name:x.Naziv||'', points:x.Koordinate||[] }))}
+          existingPolys={(allAreas||[])
+            .filter(x => x.Id && x.DanId === area.DanId && x.Id !== area.Id)
+            .map(x => ({
+              color: fixColor(x.HEXboja||'#00aaff'),
+              name: x.Naziv || '',
+              points: Array.isArray(x.Koordinate) ? x.Koordinate : []
+            }))
+          }
+          onSave={(pts)=>{
+            onField(idx,'Koordinate', Array.isArray(pts)? pts : []);
+            setShowMap(false);
+            toast.success('Mapa sačuvana.');
+          }}
         />
       )}
     </div>
@@ -305,9 +342,10 @@ function fixColor(hx){
   return v;
 }
 
-/** SVG "mapa" editor – klik dodaje tačku (0..1 koordinata), Undo/Clear dugmad, poligon + labela na centroidu */
-function MapEditor({ color, name, points, setPoints, locked, existingPolys }){
+function MapEditor({ color, name, initialPoints, locked, existingPolys, onSave }){
   const svgRef = useRef(null);
+  const [draft, setDraft] = useState(Array.isArray(initialPoints) ? initialPoints : []);
+  useEffect(()=>{ setDraft(Array.isArray(initialPoints) ? initialPoints : []); }, [initialPoints]);
 
   function svgCoords(evt){
     const svg = svgRef.current;
@@ -321,76 +359,180 @@ function MapEditor({ color, name, points, setPoints, locked, existingPolys }){
 
   function handleClick(e){
     if (locked) return;
-    // Ako kliknemo na postojeći poligon (readonly), taj polygon blokira klik (pointer-events), pa neće stići ovamo → “ne može preko njega”
     const [x,y] = svgCoords(e);
-    setPoints([...(points||[]), [x,y]]);
+    setDraft(prev => [...prev, [x,y]]);
   }
 
   function pathD(pts){
     if (!pts || pts.length === 0) return '';
-    const px = pts.map(([x,y]) => `${x*100}%,${y*100}%`).join(' ');
-    return px;
+    return pts.map(([x,y]) => `${x*100}%,${y*100}%`).join(' ');
   }
 
   function centroid(pts){
-    if (!pts || pts.length === 0) return [0.5,0.5];
+    if (!Array.isArray(pts) || pts.length < 3) return [0.5,0.5];
     let cx=0, cy=0, A=0;
     for(let i=0;i<pts.length;i++){
-      const [x1,y1] = pts[i];
-      const [x2,y2] = pts[(i+1)%pts.length];
+      const [x1,y1] = pts[i] || [0,0];
+      const [x2,y2] = pts[(i+1)%pts.length] || [0,0];
       const cross = x1*y2 - x2*y1;
       A += cross;
       cx += (x1 + x2) * cross;
       cy += (y1 + y2) * cross;
     }
     A = A/2;
-    if (Math.abs(A) < 1e-8) return pts[0];
+    if (!Number.isFinite(A) || Math.abs(A) < 1e-8) return pts[0];
     cx = cx/(6*A); cy = cy/(6*A);
     return [clamp(cx,0,1), clamp(cy,0,1)];
   }
 
-  const [cx, cy] = centroid(points||[]);
+  const [cx, cy] = centroid(draft||[]);
+  const hasPoly = Array.isArray(draft) && draft.length >= 3;
+
   return (
     <div className="map-wrap">
       <div className="map-toolbar">
-        <button className="ar-btn" disabled={locked || (points||[]).length===0} onClick={()=>setPoints([])}>Obriši sve tačke</button>
-        <button className="ar-btn" disabled={locked || (points||[]).length===0}
-          onClick={()=>setPoints((pts)=>pts.slice(0, -1))}>Vrati unazad</button>
-        <button className="ar-btn" disabled>Sačuvaj područje (čuva se gore dugmetom)</button>
+        <button className="ar-btn" disabled={locked || draft.length===0} onClick={()=>setDraft([])}>Obriši sve tačke</button>
+        <button className="ar-btn" disabled={locked || draft.length===0} onClick={()=>setDraft(d=>d.slice(0,-1))}>Vrati unazad</button>
+        <button className="ar-btn" disabled={locked || !hasPoly} onClick={()=>onSave?.(draft)}>Sačuvaj mapu</button>
       </div>
 
       <div className="map-canvas" onClick={handleClick}>
         <svg ref={svgRef} className="map-svg" viewBox="0 0 1000 1000" preserveAspectRatio="none">
-          {/* Postojeća područja za isti dan – readonly sloj, smanjen opacity + blokira klik (pointer-events:auto) */}
           {(existingPolys||[]).map((p, i) => (
-            <g key={`ex-${i}`}>
-              <polygon
-                className="map-poly-existing"
-                points={pathD(p.points).replace(/%/g,'')}
-                style={{ fill: p.color, opacity: 0.35 }}
-              />
-              {p.points?.length>=3 && (
-                <text className="map-label" x={centroid(p.points)[0]*1000} y={centroid(p.points)[1]*1000} textAnchor="middle">
+            Array.isArray(p.points) && p.points.length>=3 ? (
+              <g key={`ex-${i}`}>
+                <polygon className="map-poly-existing"
+                  points={pathD(p.points).replace(/%/g,'')}
+                  style={{ fill: p.color, opacity: 0.35 }} />
+                <text className="map-label"
+                      x={centroid(p.points)[0]*1000}
+                      y={centroid(p.points)[1]*1000}
+                      textAnchor="middle">
                   {p.name || 'Područje'}
                 </text>
-              )}
-            </g>
+              </g>
+            ) : null
           ))}
 
-          {/* Naše aktivno područje */}
-          {points?.length>=3 && (
+          {hasPoly && (
             <>
-              <polygon className="map-poly" points={pathD(points).replace(/%/g,'')} style={{ fill: color }} />
+              <polygon className="map-poly" points={pathD(draft).replace(/%/g,'')} style={{ fill: color }} />
               <text className="map-label" x={cx*1000} y={cy*1000} textAnchor="middle">{name||'Područje'}</text>
             </>
           )}
 
-          {/* Pinovi (plavi kružići) */}
-          {(points||[]).map(([x,y],i)=>(
+          {(draft||[]).map(([x,y],i)=>(
             <circle key={i} className="map-pin" cx={x*1000} cy={y*1000} r="6" />
           ))}
         </svg>
       </div>
     </div>
   );
+}
+
+
+function MapEditorLeaflet({ color, name, initialPoints, locked, existingPolys, onSave }){
+  const [draft, setDraft] = React.useState(Array.isArray(initialPoints) ? initialPoints : []);
+
+  React.useEffect(()=>{ 
+    setDraft(Array.isArray(initialPoints) ? initialPoints : []); 
+  }, [initialPoints]);
+
+  const center = React.useMemo(() => {
+    if (draft?.length >= 1){
+      const [lat,lng] = draft[0] || [];
+      if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat,lng];
+    }
+    return [44.8125, 20.4612]; // Beograd default
+  }, [draft]);
+
+  function ClickCatcher(){
+    useMapEvents({
+      click(e){
+        if (locked) return;
+        const { lat, lng } = e.latlng || {};
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+        // zabrani dodavanje unutar postojećih poligona istog dana
+        for (const p of (existingPolys||[])){
+          if (Array.isArray(p.points) && p.points.length >= 3){
+            if (pointInPolygon([lat, lng], p.points)) return;
+          }
+        }
+        setDraft(prev => [...prev, [lat,lng]]);
+      }
+    });
+    return null;
+  }
+
+  const hasPoly = Array.isArray(draft) && draft.length >= 3;
+
+  return (
+    <div className="map-wrap">
+      <div className="map-toolbar">
+        <button className="ar-btn" disabled={locked || draft.length===0} onClick={()=>setDraft([])}>
+          Obriši sve tačke
+        </button>
+        <button className="ar-btn" disabled={locked || draft.length===0} onClick={()=>setDraft(d=>d.slice(0,-1))}>
+          Vrati unazad
+        </button>
+        <button className="ar-btn" disabled={locked || !hasPoly} onClick={()=>onSave?.(draft)}>
+          Sačuvaj mapu
+        </button>
+      </div>
+
+      <div className="map-canvas">
+        <MapContainer center={center} zoom={13} style={{ width:'100%', height:'100%', borderRadius:10 }}>
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; OpenStreetMap contributors'
+          />
+
+          {/* Postojeći poligoni (readonly, prozirnije) */}
+          {(existingPolys||[]).map((p, i) => (
+            Array.isArray(p.points) && p.points.length >= 3 ? (
+              <Polygon
+                key={`ex-${i}`}
+                pathOptions={{ color:'#777', fillColor:p.color, fillOpacity:0.3, opacity:0.9 }}
+                positions={p.points}
+                interactive={false}
+              >
+                <Tooltip permanent direction="center">{p.name || 'Područje'}</Tooltip>
+              </Polygon>
+            ) : null
+          ))}
+
+          {/* Naš draft poligon */}
+          {hasPoly && (
+            <Polygon
+              pathOptions={{ color:'#888', fillColor:color, fillOpacity:0.45, opacity:1 }}
+              positions={draft}
+            >
+              <Tooltip permanent direction="center">{name || 'Područje'}</Tooltip>
+            </Polygon>
+          )}
+
+          {/* PINOVI — isti “plavi kružić” kao i pre (radius 6) */}
+          {draft.map(([lat,lng],i)=>(
+            <CircleMarker key={i} center={[lat,lng]} radius={6}
+              pathOptions={{ color:'#3b82f6', fillColor:'#3b82f6', fillOpacity:1 }} />
+          ))}
+
+          <ClickCatcher />
+        </MapContainer>
+      </div>
+    </div>
+  );
+}
+
+function pointInPolygon([lat, lng], poly){
+  let inside = false;
+  for (let i=0, j=poly.length-1; i<poly.length; j=i++){
+    const [y1, x1] = poly[i];
+    const [y2, x2] = poly[j];
+    const intersect = ((y1 > lat) !== (y2 > lat)) &&
+                      (lng < (x2 - x1) * (lat - y1) / ((y2 - y1) || 1e-12) + x1);
+    if (intersect) inside = !inside;
+  }
+  return inside;
 }
