@@ -143,7 +143,8 @@ export default function BasicInfo({ eventId, onEventId, onBasicInfoChange }){
     }
   }, [deferredUpload, eventId, imgFile, busy]);
 
-  // Emitovanje dana događaja kad se menjaju datumi
+  // Šalje RANGE na svaku promenu datuma,
+  // i čim postoji i kraj → šalje gotove "dane" (array) ka Days
   useEffect(() => {
     try {
       const startISO = form?.DatumPocetka || null;
@@ -151,6 +152,7 @@ export default function BasicInfo({ eventId, onEventId, onBasicInfoChange }){
         ? (startISO && form?.KrajVreme ? `${startISO.slice(0,10)}T${form.KrajVreme}` : startISO)
         : (form?.DatumKraja || null);
 
+      // 1) Uvek pošalji range (da Days reaguje i na parcijalne izmene)
       window.dispatchEvent(new CustomEvent('ne:dates', {
         detail: {
           DatumPocetka: startISO,
@@ -158,7 +160,71 @@ export default function BasicInfo({ eventId, onEventId, onBasicInfoChange }){
           Jednodnevni: !!form?.Jednodnevni,
         }
       }));
+
+      // 2) Ako imamo i početak i kraj → izračunaj i pošalji "dane"
+      if (startISO && (endISO || form?.Jednodnevni)) {
+        const atMidnight = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+        const ymd = (d)=>{ const x=atMidnight(d); const y=x.getFullYear(); const m=String(x.getMonth()+1).padStart(2,'0'); const dd=String(x.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; };
+        const addDays = (d,n)=>{ const x=atMidnight(d); x.setDate(x.getDate()+n); return x; };
+
+        const start = new Date(startISO);
+        const end = new Date(endISO || startISO);
+        if (!isNaN(start) && !isNaN(end)) {
+          const total = Math.floor((atMidnight(end) - atMidnight(start))/86400000) + 1;
+          const count = Math.max(1, total);
+          const days = [];
+          for (let i=0;i<count;i++){
+            const date = addDays(start, i);
+            days.push({
+              RedniBroj: i+1,
+              Naziv: `Dan ${i+1}`,
+              Opis: '',
+              DatumOdrzavanja: ymd(date),
+            });
+          }
+          window.dispatchEvent(new CustomEvent('ne:days', {
+            detail: {
+              days,
+              range: { start: startISO, end: (endISO || startISO), count }
+            }
+          }));
+        }
+      }
     } catch {}
+  }, [form?.DatumPocetka, form?.DatumKraja, form?.KrajVreme, form?.Jednodnevni]);
+
+  // Ako Days zatraži (na mount), odmah re-emituj datume i dane
+  useEffect(() => {
+    function onDatesRequest(){
+      try {
+        const startISO = form?.DatumPocetka || null;
+        const endISO = form?.Jednodnevni
+          ? (startISO && form?.KrajVreme ? `${startISO.slice(0,10)}T${form.KrajVreme}` : startISO)
+          : (form?.DatumKraja || null);
+
+        window.dispatchEvent(new CustomEvent('ne:dates', {
+          detail: { DatumPocetka: startISO, DatumKraja: endISO, Jednodnevni: !!form?.Jednodnevni }
+        }));
+
+        if (startISO && (endISO || form?.Jednodnevni)) {
+          const atMidnight = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+          const ymd = (d)=>{ const x=atMidnight(d); const y=x.getFullYear(); const m=String(x.getMonth()+1).padStart(2,'0'); const dd=String(x.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; };
+          const addDays = (d,n)=>{ const x=atMidnight(d); x.setDate(x.getDate()+n); return x; };
+          const start = new Date(startISO);
+          const end = new Date(endISO || startISO);
+          if (!isNaN(start) && !isNaN(end)) {
+            const total = Math.floor((atMidnight(end) - atMidnight(start))/86400000) + 1;
+            const count = Math.max(1, total);
+            const days = Array.from({length: count}, (_,i)=>({
+              RedniBroj: i+1, Naziv: `Dan ${i+1}`, Opis: '', DatumOdrzavanja: ymd(addDays(start,i))
+            }));
+            window.dispatchEvent(new CustomEvent('ne:days', { detail: { days, range: { start: startISO, end: (endISO || startISO), count } } }));
+          }
+        }
+      } catch {}
+    }
+    window.addEventListener('ne:dates:request', onDatesRequest);
+    return () => window.removeEventListener('ne:dates:request', onDatesRequest);
   }, [form?.DatumPocetka, form?.DatumKraja, form?.KrajVreme, form?.Jednodnevni]);
 
 

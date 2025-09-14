@@ -146,6 +146,47 @@ export default function Days({ eventId }){
   }, [eventId]);
 
 
+  // Prima gotove "days" iz BasicInfo i popunjava podforme (merge-uje Id/_locked ako postoje)
+  useEffect(() => {
+    function onDays(e){
+      if (!eventId) return;
+      const payload = e?.detail || {};
+      const incoming = Array.isArray(payload.days) ? payload.days : [];
+      if (!incoming.length) return;
+
+      // Setuj range iz payload-a (ako je poslat)
+      setRange(prev => {
+        const s = payload.range?.start ? new Date(payload.range.start) : prev.start;
+        const en = payload.range?.end ? new Date(payload.range.end) : prev.end;
+        const cnt = payload.range?.count || incoming.length;
+        return { start: s, end: en, count: cnt };
+      });
+
+      // Merge po indeksu (RedniBroj-1) da sačuvamo Id/_locked ako već postoje
+      setDays(prev => {
+        const next = incoming.map((d, i) => {
+          const keep = prev[i] || {};
+          return {
+            localId: keep.localId || `day-${i+1}-${d.DatumOdrzavanja}`,
+            Id: keep.Id,                          // zadrži Id ako postoji
+            _locked: keep.Id ? true : (keep._locked ?? false),
+            RedniBroj: i + 1,
+            Naziv: keep.Naziv || d.Naziv,
+            Opis: keep.Opis || d.Opis,
+            DatumOdrzavanja: d.DatumOdrzavanja
+          };
+        });
+        return next;
+      });
+    }
+    window.addEventListener('ne:days', onDays);
+
+    // na mount zatraži trenutne vrednosti (ako BasicInfo već ima unesene datume)
+    window.dispatchEvent(new Event('ne:dates:request'));
+
+    return () => window.removeEventListener('ne:days', onDays);
+  }, [eventId]);
+
 
   function onChange(idx, field, value){
     setDays(prev => prev.map((d,i)=> i===idx ? ({...d, [field]: value}) : d));

@@ -26,6 +26,7 @@ function extractEnumNames(resp){
   return [];
 }
 const TAGS = ['Muzika','Sport','Tehnologija','Umetnost','Porodicni','Poslovni'];
+const KATEGORIJE = ['utakmica', 'protest', 'vašar', 'žurka', 'festival', 'ostalo']
 
 function parseYMD(dateStr){
   // Accepts 'YYYY-MM-DD' -> Date at local 00:00
