@@ -51,5 +51,12 @@ namespace EventOrganizerAPI.Controllers
             await _servis.Obrisi(id);
             return NoContent();
         }
+
+        [HttpDelete("obrisi-za-dogadjaj/{dogadjajId}")]
+        public async Task<IActionResult> ObrisiSveZaDogadjaj(string dogadjajId)
+        {
+            await _servis.ObrisiSveZaDogadjaj(dogadjajId);
+            return NoContent();
+        }
     }
 }

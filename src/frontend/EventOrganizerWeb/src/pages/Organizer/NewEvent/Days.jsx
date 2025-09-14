@@ -1,5 +1,5 @@
 // src/pages/Organizer/NewEvent/Days.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import toast from 'react-hot-toast';
 import '../../../styles/NewEvent/days.css';
 import * as neweventApi from '../../../services/newEventApi';
@@ -9,6 +9,58 @@ export default function Days({ eventId }){
   const [loading, setLoading] = useState(false);
   const [days, setDays] = useState([]); // {Id?, RedniBroj, Naziv, Opis, DatumOdrzavanja, _locked, localId}
   const [range, setRange] = useState({ start: null, end: null, count: 0 });
+
+  const syncingRef = useRef(false);
+
+  const ensureId = (obj) => obj?.Id || obj?.id || obj?._id || obj;
+
+  // Reset (& recreate) – obriši sve dane za događaj, pa kreiraj iz "nextDays"
+  async function resetAndRecreateAllDays(nextDays){
+    if (!eventId || syncingRef.current) return;
+    syncingRef.current = true;
+    try{
+      setLoading(true);
+
+      // 1) obrisi sve postojeće dane za događaj (backend ih briše i čisti Dogadjaj.Dani)
+      await daysApi.removeAllForEvent(eventId);
+
+      // 2) kreiraj ponovo sve dane po poretku i skupi ID-jeve
+      const ensuredIds = [];
+      for (let i = 0; i < nextDays.length; i++){
+        const d = nextDays[i];
+        const payload = {
+          Naziv: String(d.Naziv || `Dan ${i+1}`),
+          Opis: String(d.Opis || ''),
+          DatumOdrzavanja: d.DatumOdrzavanja,
+          Dogadjaj: eventId
+        };
+        const created = await daysApi.create(payload);
+        const id = ensureId(created);
+        nextDays[i] = { ...d, Id: id, _locked: true, RedniBroj: i+1 };
+        ensuredIds.push(id);
+      }
+
+      // 3) upiši kompletan niz ID-jeva dana u Dogadjaj
+      try{
+        await neweventApi.updateDayIds(eventId, ensuredIds);
+      }catch(e){
+        console.warn('updateDayIds nije uspeo ili nije definisan:', e);
+      }
+
+      // 4) commit lokalnog stanja
+      setDays(nextDays.map((d,i)=>({ ...d, Id: ensuredIds[i], _locked: true, RedniBroj: i+1 })));
+      setRange(prev => ({ ...prev, count: nextDays.length }));
+      toast.success('Dani resetovani i ponovo kreirani.');
+    }catch(err){
+      console.error(err);
+      toast.error('Greška pri resetovanju dana.');
+    }finally{
+      syncingRef.current = false;
+      setLoading(false);
+    }
+  }
+
+
 
   const disabledAll = !eventId;
 
@@ -112,73 +164,78 @@ export default function Days({ eventId }){
   }, [eventId]);
 
   useEffect(() => {
-    function onDates(e){
-      const d = e?.detail || {};
-      if (!eventId) return;
+      function onDates(e){
+        const d = e?.detail || {};
+        if (!eventId) return;
 
-      const start = parseDateFlexible(d.DatumPocetka || d.DatumPocetak || d.Start || d.StartDate);
-      const end   = parseDateFlexible(d.DatumKraja || d.DatumZavrsetka || d.Kraj || d.End || d.EndDate) || start;
-      if(!start) return;
+        const start = parseDateFlexible(d.DatumPocetka || d.DatumPocetak || d.Start || d.StartDate);
+        const end   = parseDateFlexible(d.DatumKraja || d.DatumZavrsetka || d.Kraj || d.End || d.EndDate) || start;
+        if(!start) return;
 
-      const cnt = Math.max(1, daysBetweenInclusive(start, end));
-      setRange({ start, end, count: cnt });
+        const cnt = Math.max(1, daysBetweenInclusive(start, end));
+        setRange({ start, end, count: cnt });
 
-      // regeneriši listu — čuvaj postojeće vrednosti po indeksu gde ima smisla
-      setDays(prev => {
-        const next = Array.from({ length: cnt }, (_, i) => {
-          const date = addDays(start, i);
-          const keep = prev[i] || {};
-          return {
-            ...keep,
-            localId: keep.localId || `day-${i+1}-${date.getTime()}`,
-            RedniBroj: i + 1,
-            Naziv: (keep.Naziv || `Dan ${i + 1}`),
-            Opis: (keep.Opis || ''),
-            DatumOdrzavanja: ymd(date),
-            _locked: keep._locked ?? false,
-          };
+        // regeneriši listu — čuvaj postojeće vrednosti po indeksu gde ima smisla
+        setDays(prev => {
+          const next = Array.from({ length: cnt }, (_, i) => {
+            const date = addDays(start, i);
+            const keep = prev[i] || {};
+            return {
+              ...keep,
+              localId: keep.localId || `day-${i+1}-${date.getTime()}`,
+              RedniBroj: i + 1,
+              Naziv: (keep.Naziv || `Dan ${i + 1}`),
+              Opis: (keep.Opis || ''),
+              DatumOdrzavanja: ymd(date),
+              _locked: keep._locked ?? false,
+            };
+          });
+          return next;
         });
-        return next;
+      }
+      window.addEventListener('ne:dates', onDates);
+      return () => window.removeEventListener('ne:dates', onDates);
+    }, [eventId]);
+
+
+    // Prima gotove "days" iz BasicInfo i popunjava podforme (merge-uje Id/_locked ako postoje)
+    useEffect(() => {
+      function onDays(e){
+    if (!eventId) return;
+    const payload = e?.detail || {};
+    const incoming = Array.isArray(payload.days) ? payload.days : [];
+    if (!incoming.length) return;
+
+    // setuj range iz payload-a (ako je poslat)
+    setRange(prev => {
+      const s = payload.range?.start ? new Date(payload.range.start) : prev.start;
+      const en = payload.range?.end ? new Date(payload.range.end) : prev.end;
+      const cnt = payload.range?.count || incoming.length;
+      return { start: s, end: en, count: cnt };
+    });
+
+    // pripremi "next" niz za kreiranje (obično iz BasicInfo stize DatumOdrzavanja i default Naziv/Opis)
+    setDays(prev => {
+      const next = incoming.map((d, i) => {
+        const keep = prev[i] || {};
+        return {
+          localId: keep.localId || `day-${i+1}-${d.DatumOdrzavanja}`,
+          // Id ignorišemo jer svakako pravimo reset & recreate
+          _locked: false,
+          RedniBroj: i + 1,
+          Naziv: keep.Naziv || d.Naziv,
+          Opis: keep.Opis || d.Opis,
+          DatumOdrzavanja: d.DatumOdrzavanja
+        };
       });
-    }
-    window.addEventListener('ne:dates', onDates);
-    return () => window.removeEventListener('ne:dates', onDates);
-  }, [eventId]);
 
+      // resetuj sve na back-u i kreiraj ponovo iz next
+      resetAndRecreateAllDays([...next]);
 
-  // Prima gotove "days" iz BasicInfo i popunjava podforme (merge-uje Id/_locked ako postoje)
-  useEffect(() => {
-    function onDays(e){
-      if (!eventId) return;
-      const payload = e?.detail || {};
-      const incoming = Array.isArray(payload.days) ? payload.days : [];
-      if (!incoming.length) return;
+      return next;
+    });
+  }
 
-      // Setuj range iz payload-a (ako je poslat)
-      setRange(prev => {
-        const s = payload.range?.start ? new Date(payload.range.start) : prev.start;
-        const en = payload.range?.end ? new Date(payload.range.end) : prev.end;
-        const cnt = payload.range?.count || incoming.length;
-        return { start: s, end: en, count: cnt };
-      });
-
-      // Merge po indeksu (RedniBroj-1) da sačuvamo Id/_locked ako već postoje
-      setDays(prev => {
-        const next = incoming.map((d, i) => {
-          const keep = prev[i] || {};
-          return {
-            localId: keep.localId || `day-${i+1}-${d.DatumOdrzavanja}`,
-            Id: keep.Id,                          // zadrži Id ako postoji
-            _locked: keep.Id ? true : (keep._locked ?? false),
-            RedniBroj: i + 1,
-            Naziv: keep.Naziv || d.Naziv,
-            Opis: keep.Opis || d.Opis,
-            DatumOdrzavanja: d.DatumOdrzavanja
-          };
-        });
-        return next;
-      });
-    }
     window.addEventListener('ne:days', onDays);
 
     // na mount zatraži trenutne vrednosti (ako BasicInfo već ima unesene datume)

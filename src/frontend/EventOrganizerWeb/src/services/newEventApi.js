@@ -36,6 +36,9 @@ export async function updateTicketIds(eventId, ticketIds){
   return await updateDraft(eventId, payload);  // pošalji PUNE podatke + izmenjene Karte
 }
 
-
-
-
+export async function updateDayIds(eventId, dayIds){
+  const ev = await getById(eventId);           // uzmi postojeće
+  const { Id, _id, ...rest } = ev || {};       // skini read-only
+  const payload = { ...rest, Id: eventId, Dani: dayIds };
+  return await updateDraft(eventId, payload);  // pošalji PUNE podatke + izmenjene Dani
+}

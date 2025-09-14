@@ -75,5 +75,15 @@ namespace EventOrganizerAPI.Services
                 await _dogadjaji.UpdateOneAsync(f, u);
             }
         }
+
+        public async Task ObrisiSveZaDogadjaj(string dogadjajId)
+        {
+            var filter = Builders<DanDogadjaja>.Filter.Eq(d => d.Dogadjaj, dogadjajId);
+            await _dani.DeleteManyAsync(filter);
+
+            var fDog = Builders<Dogadjaj>.Filter.Eq(d => d.Id, dogadjajId);
+            var uDog = Builders<Dogadjaj>.Update.Set(d => d.Dani, new List<string>());
+            await _dogadjaji.UpdateOneAsync(fDog, uDog);
+        }
     }
 }

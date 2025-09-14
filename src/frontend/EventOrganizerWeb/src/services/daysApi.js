@@ -24,3 +24,8 @@ export async function update(id, dto){
 export async function remove(id){
   await api.delete(`dani/obrisi/${id}`);
 }
+export async function removeAllForEvent(eventId){
+  await api.delete(`dani/obrisi-za-dogadjaj/${eventId}`);
+}
+
+/* da brise datume kada promenim range datuma i da belezi sve preko azirranja eventa */
