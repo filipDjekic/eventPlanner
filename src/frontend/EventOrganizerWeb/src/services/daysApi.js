@@ -27,5 +27,7 @@ export async function remove(id){
 export async function removeAllForEvent(eventId){
   await api.delete(`dani/obrisi-za-dogadjaj/${eventId}`);
 }
-
-/* da brise datume kada promenim range datuma i da belezi sve preko azirranja eventa */
+export async function listForEventApi(eventId){
+  const { data } = await api.get(`dani/vrati-sve-za-dogadjaj/${eventId}`);
+  return Array.isArray(data) ? data : [];
+}

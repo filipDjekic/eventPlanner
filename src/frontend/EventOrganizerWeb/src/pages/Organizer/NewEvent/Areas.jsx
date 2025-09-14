@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import '../../../styles/NewEvent/areas.css';
 import * as areasApi from '../../../services/areasApi';
 import * as daysApi from '../../../services/daysApi'; // koristimo za dropdown dana
+import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer, Polygon, CircleMarker, Tooltip, useMapEvents } from 'react-leaflet';
 
 export default function Areas({ eventId }){
   const [loading, setLoading] = useState(false);
