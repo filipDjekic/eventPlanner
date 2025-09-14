@@ -85,5 +85,10 @@ namespace EventOrganizerAPI.Services
             var uDog = Builders<Dogadjaj>.Update.Set(d => d.Dani, new List<string>());
             await _dogadjaji.UpdateOneAsync(fDog, uDog);
         }
+
+        public async Task<List<DanDogadjaja>> VratiSveZaDogadjaj(string dogadjajId)
+        {
+            return await _dani.Find(d => d.Dogadjaj == dogadjajId).ToListAsync();
+        }
     }
 }

@@ -13,5 +13,6 @@ namespace EventOrganizerAPI.Services.Interfaces
         Task Azuriraj(string id, IzmeniDanDogadjaja dto);
         Task Obrisi(string id);
         Task ObrisiSveZaDogadjaj(string dogadjajId);
+        Task<List<DanDogadjaja>> VratiSveZaDogadjaj(string dogadjajId);
     }
 }
