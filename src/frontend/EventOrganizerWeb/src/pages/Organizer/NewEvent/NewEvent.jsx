@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import BasicInfo from './BasicInfo';
 import Tickets from './Tickets';
 import Days from './Days';
+import Areas from './Areas';
 
 export default function NewEvent(){
   const [eventId, setEventId] = useState(null);
@@ -23,9 +24,10 @@ export default function NewEvent(){
           setInfFromBasic(!!infinite);
         }}
       />
+      {/* Sledeće podforme će se dodavati ispod, i dobiće eventId kada nastane */}
       <Tickets eventId={eventId} initialCapacity={capFromBasic} initialInfinite={infFromBasic} />
       <Days eventId={eventId} />
-      {/* Sledeće podforme će se dodavati ispod, i dobiće eventId kada nastane */}
+      <Areas eventId={eventId} />
     </div>
   );
 }
