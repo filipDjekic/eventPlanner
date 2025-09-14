@@ -99,7 +99,8 @@ namespace EventOrganizerAPI.Services
                 .Set(d => d.Naziv, dto.Naziv)
                 .Set(d => d.Opis, dto.Opis)
                 .Set(d => d.Status, dto.Status)
-                .Set(d => d.Tagovi, dto.Tagovi);
+                .Set(d => d.Tagovi, dto.Tagovi)
+                .Set(d => d.Dani, dto.Dani);
 
             if (dto.DatumPocetka.HasValue)
                 update = update.Set(d => d.DatumPocetka, dto.DatumPocetka.Value);
@@ -109,6 +110,9 @@ namespace EventOrganizerAPI.Services
                 update = update.Set(d => d.Lokacija, dto.Lokacija);
             if (!string.IsNullOrEmpty(dto.Kategorija))
                 update = update.Set(d => d.Kategorija, dto.Kategorija);
+
+            if (dto.Dani != null)
+                update = update.Set(d => d.Dani, dto.Dani);
 
             if (dto.Kapacitet.HasValue)
                 update = update.Set(d => d.Kapacitet, dto.Kapacitet.Value);
