@@ -40,3 +40,7 @@ export async function getForDay(dayId){
   const all = await getAll();
   return all.filter(a => a?.DanId === dayId);
 }
+export async function listForEventApi(eventId){
+  const { data } = await api.get(`dani/vrati-sve-za-dogadjaj/${eventId}`);
+  return Array.isArray(data) ? data : [];
+}
