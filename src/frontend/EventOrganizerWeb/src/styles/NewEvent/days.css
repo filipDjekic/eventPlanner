@@ -35,3 +35,52 @@
   cursor:not-allowed;
   background: rgba(255,255,255,0.06);
 }
+/* Glavna “podforma” (okvir oko cele liste dana) */
+.dy-main{
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:16px;
+  padding:16px;
+  background:rgba(255,255,255,0.03);
+  box-shadow:0 6px 20px rgba(0,0,0,0.25);
+}
+
+/* Doterivanje kartice jednog dana */
+.dy-card{
+  border-radius:14px;
+  padding:0;               /* header + body imaju svoje padding-e */
+  overflow:hidden;
+  transition:border-color .15s ease, box-shadow .15s ease, transform .12s ease;
+}
+.dy-card:hover{
+  border-color:rgba(255,255,255,0.18);
+  box-shadow:0 8px 26px rgba(0,0,0,0.28);
+  transform:translateY(-1px);
+}
+
+/* Header kartice (dan + datum + dugme) */
+.dy-card-head{
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px;
+  background:rgba(255,255,255,0.04);
+}
+.dy-title{ font-weight:600; }
+.dy-badge{
+  font-size:12px; opacity:.9;
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:999px; padding:4px 8px;
+}
+.dy-spacer{ flex:1; }
+
+/* Separator između headera i tela */
+.dy-sep{ height:1px; background:rgba(255,255,255,0.10); }
+
+/* Unutrašnji padding grida u telu kartice */
+.dy-grid{ padding:12px; }
+
+/* Dugme poravnaј u headeru */
+.dy-actions{ display:flex; align-items:center; }
+
+/* Zaključano stanje – suptilno priguši inputs */
+.dy-card.is-locked .input{
+  opacity:.75;
+}

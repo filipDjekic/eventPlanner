@@ -270,9 +270,23 @@ export default function Days({ eventId }){
       )}
 
       {eventId && range.count > 0 && (
+      <div className="dy-main">
         <div className="dy-list">
           {days.map((d, idx) => (
-            <div key={d.localId || idx} className="dy-card">
+            <div key={d.localId || idx} className={`dy-card ${d._locked ? 'is-locked' : ''}`}>
+              <div className="dy-card-head">
+                <div className="dy-title">Dan {d.RedniBroj}</div>
+                <div className="dy-badge">{d.DatumOdrzavanja}</div>
+                <div className="dy-spacer" />
+                <div className="dy-actions">
+                  <button className="dy-btn" disabled={!eventId || loading} onClick={()=>onToggle(idx)}>
+                    {d._locked ? 'Izmeni' : (d.Id ? 'Sačuvaj izmene' : 'Sačuvaj')}
+                  </button>
+                </div>
+              </div>
+
+              <div className="dy-sep" />
+
               <div className="dy-grid">
                 <label className="block">
                   <div className="label mb-1">Naziv</div>
@@ -287,16 +301,12 @@ export default function Days({ eventId }){
                   <input className="input" type="date" value={d.DatumOdrzavanja} readOnly disabled/>
                 </label>
               </div>
-
-              <div className="dy-actions">
-                <button className="dy-btn" disabled={!eventId || loading} onClick={()=>onToggle(idx)}>
-                  {d._locked ? 'Izmeni' : (d.Id ? 'Sačuvaj izmene' : 'Sačuvaj')}
-                </button>
-              </div>
             </div>
           ))}
         </div>
-      )}
+      </div>
+    )}
+
     </div>
   );
 }
