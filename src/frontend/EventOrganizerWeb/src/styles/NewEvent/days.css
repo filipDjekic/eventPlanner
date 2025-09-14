@@ -1,0 +1,37 @@
+/* src/styles/NewEvent/days.css */
+
+/* Wrapper i header (u skladu sa tickets.css/basicinfo.css) */
+.dy-wrap{margin: 5% 0%;}
+.dy-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.dy-btn{
+  border:1px solid rgba(255,255,255,0.18);
+  border-radius:8px;
+  padding:8px 12px;
+  background:rgba(255,255,255,0.06);
+  cursor:pointer;
+}
+.dy-btn:disabled{opacity:.6;cursor:not-allowed;}
+.dy-btn:hover{background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.25);}
+
+/* Info poruka */
+.dy-note{margin-bottom:10px; opacity:.85}
+
+/* Lista i kartice */
+.dy-list{display:flex;flex-direction:column;gap:12px;}
+.dy-card{border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:12px;background:rgba(255,255,255,0.04);}
+
+/* Grid za polja (preslikano iz tickets.css col-grid) */
+.dy-grid{display:grid;grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px}
+@media (max-width: 1024px){
+  .dy-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (max-width: 640px){
+  .dy-grid{grid-template-columns:1fr;}
+}
+
+/* Disabled input look (isti kao basicinfo.css) */
+.input:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+  background: rgba(255,255,255,0.06);
+}

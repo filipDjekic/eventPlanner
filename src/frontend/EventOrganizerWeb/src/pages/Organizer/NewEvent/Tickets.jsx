@@ -217,6 +217,13 @@ export default function Tickets({ eventId, initialCapacity, initialInfinite }){
   }
 
   function onChange(idx, field, value){
+    if(field === 'Boja'){
+      const v = String(value || '').trim();
+      const safe = (v.startsWith('#') && v.length === 7) ? v : '#ffffff';
+      setTickets(prev => prev.map((t,i)=> i===idx ? ({...t, Boja: safe}) : t));
+      return;
+    }
+
     setTickets(prev => prev.map((t,i)=> i===idx ? ({...t, [field]: value}) : t));
   }
 
@@ -335,8 +342,8 @@ export default function Tickets({ eventId, initialCapacity, initialInfinite }){
               <label className="block tk-color">
                 <div className="label mb-1">Boja</div>
                 <div className="tk-color-row">
-                  <input className="input tk-color-input" type="color" value={t.Boja} onChange={e=>onChange(idx,'Boja',e.target.value)} disabled={disabledAll || t.locked} />
-                  <span className="tk-swatch" style={{ backgroundColor: t.Boja }} />
+                  <input className="input tk-color-input" type="color" value={t.Boja || '#ffffff'} onChange={e=>onChange(idx,'Boja',e.target.value)} disabled={disabledAll || t.locked} />
+                  <span className="tk-swatch" style={{ backgroundColor: t.Boja || '#ffffff' }} />
                 </div>
               </label>
             </div>

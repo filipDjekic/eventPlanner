@@ -1,0 +1,261 @@
+// src/pages/Organizer/NewEvent/Days.jsx
+import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import '../../../styles/NewEvent/days.css';
+import * as neweventApi from '../../../services/newEventApi';
+import * as daysApi from '../../../services/daysApi';
+
+export default function Days({ eventId }){
+  const [loading, setLoading] = useState(false);
+  const [days, setDays] = useState([]); // {Id?, RedniBroj, Naziv, Opis, DatumOdrzavanja, _locked, localId}
+  const [range, setRange] = useState({ start: null, end: null, count: 0 });
+
+  const disabledAll = !eventId;
+
+  // Helpers
+  function atMidnight(date){
+    const d = new Date(date);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+  function daysBetweenInclusive(start, end){
+    const ms = atMidnight(end).getTime() - atMidnight(start).getTime();
+    return Math.floor(ms / 86400000) + 1;
+  }
+  function addDays(d, n){
+    const x = new Date(atMidnight(d));
+    x.setDate(x.getDate() + n);
+    return x;
+  }
+  function ymd(date){
+    const d = atMidnight(date);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // Učitaj događaj i pripremi dane
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      if (!eventId){
+        setDays([]);
+        setRange({ start:null, end:null, count:0 });
+        return;
+      }
+      try{
+        setLoading(true);
+        const ev = await neweventApi.getById(eventId);
+        const startRaw = ev?.DatumPocetka ?? ev?.DatumPocetak ?? ev?.Pocetak ?? ev?.StartDate ?? ev?.Start;
+        const endRaw   = ev?.Jednodnevni ? startRaw : (ev?.DatumKraja ?? ev?.DatumZavrsetka ?? ev?.Kraj ?? ev?.EndDate ?? startRaw);
+
+        const start = parseDateFlexible(startRaw);
+        const end   = parseDateFlexible(endRaw ?? startRaw);
+        if(!start){
+          //setRange({ start:null, end:null, count:0 });
+          //setDays([]);
+          return;
+        }
+        const count = Math.max(1, daysBetweenInclusive(start, end));
+        if(!mounted) return;
+        setRange({ start, end, count });
+
+        // Preuzmi postojeće dane (ako postoje)
+        let existing = [];
+        try { existing = await daysApi.getForEvent(eventId); } catch { existing = []; }
+
+        // Ako backend vraća niz ID-jeva, resolve-uj u objekte
+        if (Array.isArray(existing) && existing.length && typeof existing[0] === 'string'){
+          try {
+            const resolved = await Promise.all(existing.map(id => daysApi.getById(id)));
+            existing = resolved.filter(Boolean);
+          } catch {}
+        }
+
+        // Normalizacija i popuna do 'count'
+        let next = Array.isArray(existing) ? existing.slice(0, count) : [];
+        // Mapiraj u shape koji render očekuje
+        next = next.map((d, i) => ({
+          localId: d.Id || `day-ex-${i}`,
+          Id: d.Id,
+          RedniBroj: d.RedniBroj || (i+1),
+          Naziv: d.Naziv || `Dan ${i+1}`,
+          Opis: d.Opis || '',
+          DatumOdrzavanja: d.DatumOdrzavanja ? ymd(d.DatumOdrzavanja) : ymd(addDays(start, i)),
+          _locked: true, // postojeći dani kreirani su zaključani
+        }));
+        // Ako ih je manje od count, dodaj prazne
+        if (next.length < count){
+          for(let i = next.length; i < count; i++){
+            const date = addDays(start, i);
+            next.push({
+              localId: `day-${i+1}-${date.getTime()}`,
+              RedniBroj: i + 1,
+              Naziv: `Dan ${i + 1}`,
+              Opis: '',
+              DatumOdrzavanja: ymd(date),
+              _locked: false, // novi nisu zaključani
+            });
+          }
+        }
+
+        setDays(next);
+      }catch(err){
+        console.error(err);
+        toast.error('Greška pri učitavanju dana.');
+      }finally{
+        setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [eventId]);
+
+  useEffect(() => {
+    function onDates(e){
+      const d = e?.detail || {};
+      if (!eventId) return;
+
+      const start = parseDateFlexible(d.DatumPocetka || d.DatumPocetak || d.Start || d.StartDate);
+      const end   = parseDateFlexible(d.DatumKraja || d.DatumZavrsetka || d.Kraj || d.End || d.EndDate) || start;
+      if(!start) return;
+
+      const cnt = Math.max(1, daysBetweenInclusive(start, end));
+      setRange({ start, end, count: cnt });
+
+      // regeneriši listu — čuvaj postojeće vrednosti po indeksu gde ima smisla
+      setDays(prev => {
+        const next = Array.from({ length: cnt }, (_, i) => {
+          const date = addDays(start, i);
+          const keep = prev[i] || {};
+          return {
+            ...keep,
+            localId: keep.localId || `day-${i+1}-${date.getTime()}`,
+            RedniBroj: i + 1,
+            Naziv: (keep.Naziv || `Dan ${i + 1}`),
+            Opis: (keep.Opis || ''),
+            DatumOdrzavanja: ymd(date),
+            _locked: keep._locked ?? false,
+          };
+        });
+        return next;
+      });
+    }
+    window.addEventListener('ne:dates', onDates);
+    return () => window.removeEventListener('ne:dates', onDates);
+  }, [eventId]);
+
+
+
+  function onChange(idx, field, value){
+    setDays(prev => prev.map((d,i)=> i===idx ? ({...d, [field]: value}) : d));
+  }
+
+  function parseDateFlexible(v){
+    if(!v) return null;
+    if(v instanceof Date) return new Date(v.getTime());
+    if(typeof v === 'number') return new Date(v);
+    if(typeof v === 'string'){
+      // dd.MM.yyyy ili dd/MM/yyyy ili dd-MM-yyyy
+      const m = v.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+      if(m){
+        const dd = parseInt(m[1],10), mm = parseInt(m[2],10)-1, yyyy = parseInt(m[3],10);
+        const d = new Date(yyyy, mm, dd); d.setHours(0,0,0,0); return d;
+      }
+      const iso = new Date(v);
+      if(!isNaN(iso)) return iso;
+    }
+    return null;
+  }
+
+
+  async function onToggle(idx){
+    if (!eventId) return;
+    const d = days[idx];
+    if (!d) return;
+
+    if (d._locked === true){
+      // Izmeni -> otključaj
+      setDays(prev => prev.map((x,i)=> i===idx ? ({...x, _locked:false}) : x));
+      return;
+    }
+
+    // Sačuvaj (kreiraj ili azuriraj)
+    const payload = {
+      Naziv: String(d.Naziv || '').trim() || `Dan ${d.RedniBroj}`,
+      Opis: String(d.Opis || '').trim(),
+      DatumOdrzavanja: d.DatumOdrzavanja, // YYYY-MM-DD
+    };
+
+    try{
+      let savedId = d.Id;
+      if (!d.Id){
+        // Kreiraj
+        const created = await daysApi.create({
+          ...payload,
+          Dogadjaj: eventId,
+        });
+        savedId = created?.Id || created?.id || created;
+        if (!savedId) {
+          toast.error('Kreiranje dana nije vratilo ID.');
+          return;
+        }
+      }else{
+        // Ažuriraj
+        await daysApi.update(d.Id, payload);
+      }
+
+      // Zaključa se forma i upiše Id
+      setDays(prev => prev.map((x,i)=> i===idx ? ({...x, Id: savedId, _locked:true}) : x));
+      toast.success(d.Id ? 'Dan ažuriran.' : 'Dan kreiran.');
+    }catch(err){
+      console.error(err);
+      toast.error('Greška pri čuvanju dana.');
+    }
+  }
+
+  return (
+    <div className="dy-wrap">
+      <div className="dy-head">
+        <h3>Dani događaja</h3>
+      </div>
+
+      {!eventId && (
+        <div className="dy-note">Kreiraj draft događaja u "Basic info" da bi uređivao dane.</div>
+      )}
+
+      {eventId && range.count === 0 && (
+        <div className="dy-note">Postavi datume u "Basic info" pa se vrati ovde da generišeš dane.</div>
+      )}
+
+      {eventId && range.count > 0 && (
+        <div className="dy-list">
+          {days.map((d, idx) => (
+            <div key={d.localId || idx} className="dy-card">
+              <div className="dy-grid">
+                <label className="block">
+                  <div className="label mb-1">Naziv</div>
+                  <input className="input" value={d.Naziv} onChange={e=>onChange(idx,'Naziv', e.target.value)} disabled={loading || d._locked}/>
+                </label>
+                <label className="block">
+                  <div className="label mb-1">Opis</div>
+                  <input className="input" value={d.Opis} onChange={e=>onChange(idx,'Opis', e.target.value)} disabled={loading || d._locked}/>
+                </label>
+                <label className="block">
+                  <div className="label mb-1">Datum održavanja</div>
+                  <input className="input" type="date" value={d.DatumOdrzavanja} readOnly disabled/>
+                </label>
+              </div>
+
+              <div className="dy-actions">
+                <button className="dy-btn" disabled={!eventId || loading} onClick={()=>onToggle(idx)}>
+                  {d._locked ? 'Izmeni' : (d.Id ? 'Sačuvaj izmene' : 'Sačuvaj')}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -30,8 +30,12 @@ export async function getById(eventId){
 }
 
 export async function updateTicketIds(eventId, ticketIds){
-  return await updateDraft(eventId, { Id: eventId, Karte: ticketIds });
+  const ev = await getById(eventId);           // učitamo postojeće vrednosti
+  const { Id, _id, ...rest } = ev || {};       // sklonimo eventualne read-only/_id polja
+  const payload = { ...rest, Id: eventId, Karte: ticketIds };
+  return await updateDraft(eventId, payload);  // pošalji PUNE podatke + izmenjene Karte
 }
+
 
 
 

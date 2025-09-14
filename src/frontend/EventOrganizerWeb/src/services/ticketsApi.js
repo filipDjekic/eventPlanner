@@ -22,8 +22,7 @@ export async function createTicket(eventId, payload){
 
 /** Ažuriraj kartu */
 export async function updateTicket(ticketId, payload){
-  const body = { ...(payload||{}), Id: ticketId };
-  const { data } = await api.put(`karta/azuriraj/${ticketId}`, body);
+  const { data } = await api.put(`karta/azuriraj/${ticketId}`, { ...(payload||{}) });
   return data;
 }
 

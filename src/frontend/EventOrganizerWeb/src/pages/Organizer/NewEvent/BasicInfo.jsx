@@ -143,6 +143,25 @@ export default function BasicInfo({ eventId, onEventId, onBasicInfoChange }){
     }
   }, [deferredUpload, eventId, imgFile, busy]);
 
+  // Emitovanje dana događaja kad se menjaju datumi
+  useEffect(() => {
+    try {
+      const startISO = form?.DatumPocetka || null;
+      const endISO = form?.Jednodnevni
+        ? (startISO && form?.KrajVreme ? `${startISO.slice(0,10)}T${form.KrajVreme}` : startISO)
+        : (form?.DatumKraja || null);
+
+      window.dispatchEvent(new CustomEvent('ne:dates', {
+        detail: {
+          DatumPocetka: startISO,
+          DatumKraja: endISO,
+          Jednodnevni: !!form?.Jednodnevni,
+        }
+      }));
+    } catch {}
+  }, [form?.DatumPocetka, form?.DatumKraja, form?.KrajVreme, form?.Jednodnevni]);
+
+
 
   useEffect(() => {
     if(debounceRef.current) clearTimeout(debounceRef.current);
