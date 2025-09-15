@@ -71,8 +71,10 @@ export default function Locations({ eventId }){
   // map modal
   const [showMap, setShowMap] = useState(false);
 
+  const getAreaId = (a) => String(a?.Id ?? a?._id ?? a?.id ?? '');
+
   const selectedArea = useMemo(
-    () => areas.find(a => String(a?.Id ?? a?._id) === String(podrucjeId)),
+    () => areas.find(a => getAreaId(a) === String(podrucjeId || '')),
     [areas, podrucjeId]
   );
 
@@ -259,6 +261,7 @@ export default function Locations({ eventId }){
 
   function beginCreate(){ resetEditor(); setShowEditor(true); }
   function beginEdit(loc){
+    setPodrucjeId(String(loc?.Podrucje || loc?.PodrucjeId || ''));
     resetEditor();
     setShowEditor(true);
     setLocId(loc?.Id || loc?._id || loc?.id);
@@ -573,14 +576,14 @@ export default function Locations({ eventId }){
             </div>
             <div>
               <div className="label">Područje</div>
-              <select className="select" value={podrucjeId} onChange={e=>setPodrucjeId(e.target.value)} disabled={lock}>
-                <option value="">-- izaberi --</option>
-                {(areas||[]).map(a => (
-                  <option key={a?.Id||a?._id} value={a?.Id||a?._id}>
-                    {a?.Naziv || 'Područje'}
-                  </option>
-                ))}
-              </select>
+                <select className="select" value={podrucjeId} onChange={e=>setPodrucjeId(e.target.value)} disabled={lock}>
+                  <option value="">-- izaberi --</option>
+                  {(areas||[]).map(a => (
+                    <option key={getAreaId(a)} value={getAreaId(a)}>
+                      {a?.Naziv || 'Područje'}
+                    </option>
+                  ))}
+                </select>
             </div>
 
             <div>
@@ -601,7 +604,9 @@ export default function Locations({ eventId }){
             <div>
               <div className="label">Pozicioniranje</div>
               <div className="map-toggle">
-                <button className="ar-btn" onClick={()=>setShowMap(true)} disabled={lock || !podrucjeId}>Obeleži na mapi</button>
+                <button className="ar-btn" onClick={()=>setShowMap(true)} disabled={!podrucjeId}>
+                  Obeleži na mapi
+                </button>
               </div>
               {(pin.x!=null && pin.y!=null) && (
                 <div className="ar-note" style={{ marginTop:8 }}>
@@ -611,23 +616,33 @@ export default function Locations({ eventId }){
             </div>
           </div>
 
-          {/* MAP SUBFORM */}
           {/* MAP SUBFORM (Leaflet pin picker) */}
-          {showMap && selectedArea && (
-            <PinPickerLeaflet
-              area={selectedArea}
-              color={hex}
-              name={naziv || 'Lokacija'}
-              pin={pin}
-              onChangePin={(p)=> setPin(p)}
-              onSave={()=>{
-                if (pin.x == null || pin.y == null) { toast.error('Postavi pin pre čuvanja.'); return; }
-                toast.success('Pin sačuvan.');
-                setShowMap(false);
-              }}
-              onClose={()=> setShowMap(false)}
-            />
+          {showMap && (
+            selectedArea ? (
+              <PinPickerLeaflet
+                area={selectedArea}
+                color={hex}
+                name={naziv || 'Lokacija'}
+                pin={pin}
+                onChangePin={(p)=> setPin(p)}
+                onSave={()=>{
+                  if (pin.x == null || pin.y == null) { toast.error('Postavi pin pre čuvanja.'); return; }
+                  toast.success('Pin sačuvan.');
+                  setShowMap(false);
+                }}
+                onClose={()=> setShowMap(false)}
+              />
+            ) : (
+              <div className="map-wrap">
+                <div className="map-toolbar">
+                  <div className="ar-spacer" />
+                  <span className="label">Izaberi područje da bi postavio pin.</span>
+                </div>
+                <div className="map-canvas" />
+              </div>
+            )
           )}
+
 
 
           {/* RESURSI: tabela (70%) + unos (30%) */}

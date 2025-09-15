@@ -46,3 +46,4 @@
   border-right: 6px solid transparent;
   border-top: 8px solid #8888ff; /* boja se prepisuje inline-om */
 }
+.map-canvas { height: 420px; }
