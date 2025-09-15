@@ -40,3 +40,7 @@ export async function getForDay(dayId){
   const all = await getAll();
   return all.filter(a => a?.DanId === dayId);
 }
+export async function listAll(){
+  const { data } = await api.get('podrucja/vrati-sve');
+  return Array.isArray(data) ? data : [];
+}

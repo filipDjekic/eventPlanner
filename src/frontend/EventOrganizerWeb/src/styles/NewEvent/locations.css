@@ -1,0 +1,28 @@
+/* src/styles/NewEvent/locations.css */
+
+/* Uvozimo izgled iz areas.css (:contentReference[oaicite:6]{index=6}) – ovde dodajemo samo specifičnosti za pin i resurse */
+.loc-pin { stroke:#111; fill:#fff; opacity:.9; }
+.loc-pin-label { font-size:10px; fill:#eee; text-shadow: 0 1px 1px #000; }
+
+.loc-res-wrap {
+  display: grid;
+  grid-template-columns: 7fr 3fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+@media (max-width: 1100px){
+  .loc-res-wrap { grid-template-columns: 1fr; }
+}
+
+.loc-res-table {
+  border:1px solid #333; border-radius:12px; background:#0f0f0f; padding:12px;
+}
+
+.loc-table { width:100%; border-collapse: collapse; }
+.loc-table th, .loc-table td { border-bottom:1px solid #222; padding:8px; }
+.loc-table th { text-align:left; color:#bbb; font-weight:600; }
+.loc-table td { color:#ddd; }
+
+.loc-res-form {
+  border:1px solid #333; border-radius:12px; background:#0f0f0f; padding:12px;
+}
