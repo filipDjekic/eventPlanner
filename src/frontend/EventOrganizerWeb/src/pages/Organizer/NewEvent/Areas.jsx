@@ -211,6 +211,11 @@ export default function Areas({ eventId }){
         if (!newId) throw new Error('Kreiranje područja nije vratilo Id.');
         setAreas(prev => prev.map((x,i)=> i===idx ? ({...x, Id:newId, _locked:true}) : x));
         toast.success('Područje kreirano.');
+
+        window.dispatchEvent(new CustomEvent('ne:areas:updated', {
+          detail: { eventId, areaId: newId, action: 'create' }
+        }));
+
       }else{
         await areasApi.update(a.Id, {
           DogadjajId: a.DogadjajId || eventId,
@@ -222,6 +227,10 @@ export default function Areas({ eventId }){
         });
         setAreas(prev => prev.map((x,i)=> i===idx ? ({...x, _locked:true}) : x));
         toast.success('Područje ažurirano.');
+        window.dispatchEvent(new CustomEvent('ne:areas:updated', {
+          detail: { eventId, areaId: a.Id, action: 'update' }
+        }));
+
       }
     }catch(err){
       console.error(err);
@@ -245,6 +254,9 @@ export default function Areas({ eventId }){
       await areasApi.remove(a.Id);
       setAreas(prev => prev.filter((_,i)=>i!==idx));
       toast.success('Područje obrisano.');
+      window.dispatchEvent(new CustomEvent('ne:areas:updated', {
+        detail: { eventId, areaId: a.Id, action: 'delete' }
+      }));
     }catch(err){
       console.error(err);
       toast.error('Greška pri brisanju.');
