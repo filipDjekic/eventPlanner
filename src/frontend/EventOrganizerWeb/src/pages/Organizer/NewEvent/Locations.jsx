@@ -5,6 +5,9 @@ import '../../../styles/NewEvent/areas.css';
 import '../../../styles/NewEvent/locations.css';
 import * as areasApi from '../../../services/areasApi';
 import * as locationsApi from '../../../services/locationsApi';
+import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer, Polygon, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
 
 /** Mapiranje tipova lokacija na HEX boje (možeš slobodno menjati) */
 const TIP_LOKACIJA = {
@@ -68,7 +71,10 @@ export default function Locations({ eventId }){
   // map modal
   const [showMap, setShowMap] = useState(false);
 
-  const selectedArea = useMemo(()=> areas.find(a => (a?.Id||a?._id) === podrucjeId), [areas, podrucjeId]);
+  const selectedArea = useMemo(
+    () => areas.find(a => String(a?.Id ?? a?._id) === String(podrucjeId)),
+    [areas, podrucjeId]
+  );
 
   // --- LOADERS ---
   async function loadAreas(){
@@ -123,6 +129,115 @@ export default function Locations({ eventId }){
   }, [eventId]);
 
   // Helpers
+  function makePinIcon(name, color){
+    const safeName = (name || 'Lokacija').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const c = color || '#8888ff';
+    return L.divIcon({
+      className: 'pin-divicon',
+      html: `
+        <div class="pin-wrap">
+          <div class="pin-label" style="background:${c}">${safeName}</div>
+          <div class="pin-tail" style="border-top-color:${c}"></div>
+        </div>
+      `,
+      iconSize: [1, 1],
+      iconAnchor: [10, 24] // približno dno "repa" na koordinati
+    });
+  }
+
+  function pointInPolygonLatLng([lat, lng], poly){
+    // poly: [[lat,lng], ...]
+    let inside = false;
+    for (let i=0, j=poly.length-1; i<poly.length; j=i++){
+      const [y1, x1] = poly[i];
+      const [y2, x2] = poly[j];
+      const intersect = ((y1 > lat) !== (y2 > lat)) &&
+                        (lng < (x2 - x1) * (lat - y1) / ((y2 - y1) || 1e-12) + x1);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+  function makePinIcon(name, color){
+    const safeName = (name || 'Lokacija').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const c = color || '#8888ff';
+    return L.divIcon({
+      className: 'pin-divicon',
+      html: `
+        <div class="pin-wrap">
+          <div class="pin-label" style="background:${c}">${safeName}</div>
+          <div class="pin-tail" style="border-top-color:${c}"></div>
+        </div>
+      `,
+      iconSize: [1, 1],
+      iconAnchor: [10, 24] // približno dno "repa" na koordinati
+    });
+  }
+
+  function PinPickerLeaflet({ area, color, name, pin, onChangePin, onClose, onSave }){
+    const positions = Array.isArray(area?.Koordinate) ? area.Koordinate : [];
+    const center = positions[0] || [44.8125, 20.4612];
+
+    function ClickCatcher(){
+      useMapEvents({
+        click(e){
+          const { lat, lng } = e.latlng || {};
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+          if (!pointInPolygonLatLng([lat, lng], positions)) return;
+          onChangePin?.({ x: lat, y: lng });
+        }
+      });
+      return null;
+    }
+
+    return (
+      <div className="map-wrap">
+        <div className="map-toolbar">
+          <button className="ar-btn" onClick={()=> onSave?.()}>Sačuvaj pin</button>
+          <button className="ar-btn" onClick={()=> onClose?.()}>Zatvori</button>
+          <div className="ar-spacer" />
+          <span className="label">Klikni unutar izabranog područja da postaviš pin</span>
+        </div>
+
+        <div className="map-canvas">
+          <MapContainer center={center} zoom={15} style={{ width:'100%', height:'100%', borderRadius:10 }}>
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      attribution="&copy; OpenStreetMap contributors" />
+
+            {positions.length >= 3 && (
+              <Polygon
+                pathOptions={{ color:'#777', fillColor: color || '#3b82f6', fillOpacity:0.30, opacity:1 }}
+                positions={positions}
+                interactive={false}
+              />
+            )}
+
+            {(pin?.x!=null && pin?.y!=null) && (
+              <Marker position={[pin.x, pin.y]} icon={makePinIcon(name, color)} />
+            )}
+
+            <ClickCatcher />
+          </MapContainer>
+        </div>
+      </div>
+    );
+  }
+
+
+  function pointInPolygonLatLng([lat, lng], poly){
+    // poly: [[lat,lng], ...]
+    let inside = false;
+    for (let i=0, j=poly.length-1; i<poly.length; j=i++){
+      const [y1, x1] = poly[i];
+      const [y2, x2] = poly[j];
+      const intersect = ((y1 > lat) !== (y2 > lat)) &&
+                        (lng < (x2 - x1) * (lat - y1) / ((y2 - y1) || 1e-12) + x1);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+
+
   function resetEditor(){
     setLocId(null);
     setNaziv('');
@@ -497,34 +612,23 @@ export default function Locations({ eventId }){
           </div>
 
           {/* MAP SUBFORM */}
+          {/* MAP SUBFORM (Leaflet pin picker) */}
           {showMap && selectedArea && (
-            <div className="map-wrap">
-              <div className="map-toolbar">
-                <button className="ar-btn" onClick={savePin}>Sačuvaj pin</button>
-                <div className="ar-spacer" />
-                <span className="label">Samo izabrano područje je prikazano</span>
-              </div>
-              <div className="map-canvas" ref={mapRef} onClick={onMapClick}>
-                <svg className="map-svg" viewBox="0 0 100 60" preserveAspectRatio="none">
-                  {/* grubi prikaz poligona (pretpostavljamo da su koordinate već normalizovane) */}
-                  <polygon
-                    className="map-poly map-poly-existing"
-                    points={(selectedArea.Koordinate||[]).map(p => `${p[1]},${p[0]}`).join(' ')}
-                    fill={hex} />
-                  {/* Pin */}
-                  {(pin.x!=null && pin.y!=null) && (
-                    <>
-                      <path className="loc-pin"
-                            d={`M ${pin.y} ${pin.x} l -1 -2 a 2 2 0 1 1 2 0 z`} />
-                      <text className="loc-pin-label" x={pin.y} y={pin.x-3} textAnchor="middle">
-                        {naziv || 'Lokacija'}
-                      </text>
-                    </>
-                  )}
-                </svg>
-              </div>
-            </div>
+            <PinPickerLeaflet
+              area={selectedArea}
+              color={hex}
+              name={naziv || 'Lokacija'}
+              pin={pin}
+              onChangePin={(p)=> setPin(p)}
+              onSave={()=>{
+                if (pin.x == null || pin.y == null) { toast.error('Postavi pin pre čuvanja.'); return; }
+                toast.success('Pin sačuvan.');
+                setShowMap(false);
+              }}
+              onClose={()=> setShowMap(false)}
+            />
           )}
+
 
           {/* RESURSI: tabela (70%) + unos (30%) */}
           <div className="loc-res-wrap">
