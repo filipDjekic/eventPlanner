@@ -163,39 +163,58 @@ export default function Days({ eventId }){
     return () => { mounted = false; };
   }, [eventId]);
 
+// REPLACE the whole useEffect for 'ne:dates' with this one
   useEffect(() => {
-      function onDates(e){
-        const d = e?.detail || {};
-        if (!eventId) return;
+    function onDates(e){
+      const d = e?.detail || {};
+      if (!eventId) return;
 
-        const start = parseDateFlexible(d.DatumPocetka || d.DatumPocetak || d.Start || d.StartDate);
-        const end   = parseDateFlexible(d.DatumKraja || d.DatumZavrsetka || d.Kraj || d.End || d.EndDate) || start;
-        if(!start) return;
+      // 1) Pokupi start/end iz payload-a (razni nazivi polja podržani)
+      const start = parseDateFlexible(d.DatumPocetka || d.DatumPocetak || d.Start || d.StartDate);
+      const end   = parseDateFlexible(d.DatumKraja || d.DatumZavrsetka || d.Kraj || d.End || d.EndDate) || start;
+      if (!start) return;
 
-        const cnt = Math.max(1, daysBetweenInclusive(start, end));
-        setRange({ start, end, count: cnt });
+      // 2) Izračunaj count i upiši range u state (čisto za UI)
+      const cnt = Math.max(1, daysBetweenInclusive(start, end));
+      setRange({ start, end, count: cnt });
 
-        // regeneriši listu — čuvaj postojeće vrednosti po indeksu gde ima smisla
-        setDays(prev => {
-          const next = Array.from({ length: cnt }, (_, i) => {
-            const date = addDays(start, i);
-            const keep = prev[i] || {};
-            return {
-              ...keep,
-              localId: keep.localId || `day-${i+1}-${date.getTime()}`,
-              RedniBroj: i + 1,
-              Naziv: (keep.Naziv || `Dan ${i + 1}`),
-              Opis: (keep.Opis || ''),
-              DatumOdrzavanja: ymd(date),
-              _locked: keep._locked ?? false,
-            };
-          });
-          return next;
+      // 3) Regeneriši lokalni niz "days" uz čuvanje UI izmena:
+      //    - prvo pokušaj match po DATUMU (ako novi dan ima isti datum kao neki stari)
+      //    - ako ne postoji, fallback po INDEKSU (Dan i -> stari Dan i)
+      setDays(prev => {
+        const next = Array.from({ length: cnt }, (_, i) => {
+          const date = addDays(start, i);
+          const dateKey = ymd(date);
+
+          // match po datumu, pa fallback po indeksu
+          const byDate = prev.find(x => x?.DatumOdrzavanja === dateKey);
+          const keep = byDate || prev[i] || {};
+
+          return {
+            ...keep,
+            localId: keep.localId || `day-${i+1}-${date.getTime()}`,
+            RedniBroj: i + 1,
+            Naziv: (keep.Naziv || `Dan ${i + 1}`),
+            Opis: (keep.Opis || ''),
+            DatumOdrzavanja: dateKey,
+            _locked: keep._locked ?? false,
+            // Ako si u UI imao ove kolekcije, preserve-uj ih:
+            Podrucja: Array.isArray(keep.Podrucja) ? keep.Podrucja : [],
+            Aktivnosti: Array.isArray(keep.Aktivnosti) ? keep.Aktivnosti : [],
+          };
         });
-      }
-      window.addEventListener('ne:dates', onDates);
-      return () => window.removeEventListener('ne:dates', onDates);
-    }, [eventId]);
+
+        // 4) Backend reset & recreate sa snapshot-ovanim vrednostima
+        resetAndRecreateAllDays([...next]);
+
+        return next;
+      });
+    }
+
+    window.addEventListener('ne:dates', onDates);
+    return () => window.removeEventListener('ne:dates', onDates);
+  }, [eventId]);
+
 
 
     // Prima gotove "days" iz BasicInfo i popunjava podforme (merge-uje Id/_locked ako postoje)

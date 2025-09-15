@@ -99,8 +99,7 @@ namespace EventOrganizerAPI.Services
                 .Set(d => d.Naziv, dto.Naziv)
                 .Set(d => d.Opis, dto.Opis)
                 .Set(d => d.Status, dto.Status)
-                .Set(d => d.Tagovi, dto.Tagovi)
-                .Set(d => d.Dani, dto.Dani);
+                .Set(d => d.Tagovi, dto.Tagovi);
 
             if (dto.DatumPocetka.HasValue)
                 update = update.Set(d => d.DatumPocetka, dto.DatumPocetka.Value);

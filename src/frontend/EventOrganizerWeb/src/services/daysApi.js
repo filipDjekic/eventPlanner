@@ -13,9 +13,11 @@ export async function getForEvent(eventId){
 }
 
 export async function create(dto){
+  // dto očekuje: { Naziv, Opis, DatumOdrzavanja, Dogadjaj, Podrucja?, Aktivnosti? }
   const { data } = await api.post('dani/kreiraj', dto);
-  return data;
+  return data; // Vrati kreirani Dan (sa Id/_id)
 }
+
 
 export async function update(id, dto){
   await api.put(`dani/azuriraj/${id}`, dto);
@@ -35,3 +37,5 @@ export async function listAll(){
   const { data } = await api.get('dani/vrati-sve'); // dodaj '/api/' ako ti baseURL NIJE '/api'
   return Array.isArray(data) ? data : [];
 }
+
+/*Poziv da kreira novi niz za datum kada izaberem novi range*/ 

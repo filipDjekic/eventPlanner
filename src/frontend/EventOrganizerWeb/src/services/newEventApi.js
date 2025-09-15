@@ -8,26 +8,50 @@ export async function createDraft(payload){
 }
 
 /** Ažurira draft događaja */
+// src/services/newEventApi.js
+
+/** Ažurira draft događaja – MERGE GUARD (ne briše Dani ako payload ne sadrži Dani) */
 export async function updateDraft(eventId, payload){
-  await api.put(`dogadjaj/azuriraj/${eventId}`, payload);
+  let existing = null;
+  try { existing = await getById(eventId); } catch {}
+
+  // Ako payload ne šalje Dani, zadrži postojeće Dani sa servera
+  const nextDani =
+    (payload && Object.prototype.hasOwnProperty.call(payload, 'Dani'))
+      ? payload.Dani
+      : (existing ? existing.Dani : undefined);
+
+  const merged = {
+    ...(existing || {}),
+    ...(payload || {}),
+    Id: eventId,
+    // eksplicitno postavi Dani posle spread-a da ne bude pregažen
+    ...(nextDani !== undefined ? { Dani: nextDani } : {})
+  };
+
+  await api.put(`dogadjaj/azuriraj/${eventId}`, merged);
+}
+
+
+/** Vrati događaj po Id-u */
+export async function getById(id){
+  const { data } = await api.get(`dogadjaj/vrati-po-id/${id}`);
+  return data;
 }
 
 /** Upload slike za događaj (multipart/form-data) */
 export async function uploadImage(eventId, file, opis=''){
-  const fd = new FormData();
-  fd.append('Slika', file);
-  fd.append('Opis', opis);
-  fd.append('DogadjajId', eventId);
-  const { data } = await api.post('dogadjaj/dodaj-sliku', fd, {
+  const formData = new FormData();
+  formData.append('DogadjajId', eventId);
+  formData.append('Slika', file);
+  if (opis) formData.append('Opis', opis);
+
+  const { data } = await api.post('dogadjaj/slika', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
-  return data;
+  return data; // očekuje { path: '/relative/path' } sa backenda
 }
 
-export async function getById(eventId){
-  const { data } = await api.get(`dogadjaj/vrati-po-id/${eventId}`);
-  return data;
-}
 
 export async function updateTicketIds(eventId, ticketIds){
   const ev = await getById(eventId);           // učitamo postojeće vrednosti
