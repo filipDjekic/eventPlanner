@@ -13,7 +13,7 @@ namespace EventOrganizerAPI.Models
         public string Naziv { get; set; }
         public string Opis { get; set; }
         [BsonRepresentation(BsonType.String)]
-        public TipResursa Tip { get; set; }
+        public string Tip { get; set; }
 
         public int UkupnoKolicina { get; set; }           
         public int RezervisanoKolicina { get; set; } = 0;   

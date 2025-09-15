@@ -43,6 +43,9 @@ export default function Days({ eventId }){
       // 3) upiši kompletan niz ID-jeva dana u Dogadjaj
       try{
         await neweventApi.updateDayIds(eventId, ensuredIds);
+        window.dispatchEvent(new CustomEvent('ne:days:updated', {
+          detail: { eventId, dayIds: ensuredIds }
+        }));
       }catch(e){
         console.warn('updateDayIds nije uspeo ili nije definisan:', e);
       }

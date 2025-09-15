@@ -15,6 +15,7 @@ namespace EventOrganizerAPI.DTOs.PodrucjeLokacija
         public string? CenovnikId { get; set; }
         public string? PodrucjeId { get; set; }
         public string? HEXboja { get; set; }
+        public string? TipLokacije { get; set; }
         public List<string>? Resursi { get; set; }
     }
 }

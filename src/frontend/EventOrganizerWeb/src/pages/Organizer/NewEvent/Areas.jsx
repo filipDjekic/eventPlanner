@@ -91,6 +91,52 @@ export default function Areas({ eventId }){
     return () => { mounted = false; };
   }, [eventId]);
 
+  // ADD: auto-refresh DANI dropdown kada Days.jsx rekreira dane
+  useEffect(() => {
+    async function refreshDaysOnly(){
+      if (!eventId) { setDays([]); return; }
+
+      try{
+        // 1) probaj direktan endpoint za dane po eventu
+        let rawDays = [];
+        try { rawDays = await daysApi.listForEventApi(eventId); } catch {}
+
+        // 2) fallback: vrati-sve pa filtriraj po Dogadjaj === eventId
+        if (!Array.isArray(rawDays) || rawDays.length === 0){
+          try {
+            const all = await daysApi.listAll();
+            rawDays = (all || []).filter(d => (d?.Dogadjaj ?? d?.dogadjaj) === eventId);
+          } catch {}
+        }
+
+        // mapiraj u shape koji dropdown koristi
+        const dayObjs = (rawDays || []).map((d,i) => ({
+          Id: d?.Id ?? d?._id ?? d?.id ?? d?.ID ?? d?._id?.$oid,
+          Naziv: d?.Naziv ?? d?.naziv ?? `Dan ${i+1}`,
+          DatumOdrzavanja: normalizeDateString(d?.DatumOdrzavanja ?? d?.datumOdrzavanja ?? d?.datum),
+        })).filter(x => !!x.Id);
+
+        setDays(sortDays(dayObjs));
+      }catch(err){
+        console.error(err);
+      }
+    }
+
+    function onDaysUpdated(e){
+      // ako je event za neki drugi dogadjaj, ignoriši
+      if (!eventId) return;
+      const targetId = e?.detail?.eventId;
+      if (targetId && targetId !== eventId) return;
+
+      // povuci sveže dane iz baze
+      refreshDaysOnly();
+    }
+
+    window.addEventListener('ne:days:updated', onDaysUpdated);
+    return () => window.removeEventListener('ne:days:updated', onDaysUpdated);
+  }, [eventId]);
+
+
   function sortDays(arr){
     return [...arr].sort((a,b)=>{
       const ta = Date.parse(a.DatumOdrzavanja||'') || 0;

@@ -15,7 +15,7 @@ namespace EventOrganizerAPI.DTOs
         public string Cenovnik { get; set; }
         public string Podrucje { get; set; }
         public string HEXboja { get; set; }
-        public TipLokacijeEnum TipLokacije { get; set; }
+        public string TipLokacije { get; set; }
         public List<string> Resursi { get; set; }
     }
 }

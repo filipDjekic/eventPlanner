@@ -19,7 +19,7 @@ namespace EventOrganizerAPI.Models
 
         public string HEXboja { get; set; }
 
-        public TipLokacijeEnum TipLokacije { get; set; } // tip lokacije enum
+        public string TipLokacije { get; set; } // tip lokacije enum
 
         // Lista ID-jeva resursa vezanih za lokaciju
         public List<string> Resursi { get; set; } = new();
