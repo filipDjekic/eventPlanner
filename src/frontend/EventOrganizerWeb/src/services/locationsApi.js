@@ -33,7 +33,7 @@ export async function create(dto){
 
 export async function update(id, dto){
   // Backend nema {id} u ruti; Id mora biti u telu
-  await api.put(`lokacije/azuriraj`, { ...dto, Id: id });
+  await api.put(`lokacije/azuriraj/${id}`, { ...dto, Id: id });
 }
 
 export async function remove(id){
@@ -71,13 +71,19 @@ export async function listAllResources(){
 
 export async function listResourcesForSupplier(supplierId){
   const all = await listAllResources();
-  return (all||[]).filter(r => (r?.Dobavljac || r?.dobavljac) === supplierId);
+  const sid = String(supplierId ?? '');
+  return (all || []).filter(r => {
+    const owner = r?.Dobavljac ?? r?.dobavljac ?? r?.DobavljacId ?? r?.dobavljacId;
+    return String(owner ?? '') === sid;
+  });
 }
 
 export async function listResourcesBySupplierAndType(supplierId, type){
   const list = await listResourcesForSupplier(supplierId);
-  return (list||[]).filter(r => (r?.Tip || r?.tip) === type);
+  const t = String(type ?? '');
+  return (list || []).filter(r => String(r?.Tip ?? r?.tip ?? '') === t);
 }
+
 
 /** Rezervacija resursa */
 export async function reserveResource(resourceId, kolicina, ctx){

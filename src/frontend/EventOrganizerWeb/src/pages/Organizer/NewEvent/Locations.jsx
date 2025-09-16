@@ -28,19 +28,6 @@ const DEFAULT_COLOR = '#8888ff';
 function ymd(d){ return new Date(d).toISOString().slice(0,10); }
 function isHex(v){ return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v||''); }
 
-/** Ray-cast point-in-polygon za [lat,lng] */
-function pointInPolygon(point, polygon){
-  if (!Array.isArray(polygon) || polygon.length < 3) return false;
-  const [x, y] = point; // x=lat, y=lng
-  let inside = false;
-  for (let i=0, j=polygon.length-1; i<polygon.length; j=i++){
-    const xi = polygon[i][0], yi = polygon[i][1];
-    const xj = polygon[j][0], yj = polygon[j][1];
-    const intersect = ((yi>y) !== (yj>y)) && (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-9) + xi);
-    if (intersect) inside = !inside;
-  }
-  return inside;
-}
 
 export default function Locations({ eventId }){
   const [loading, setLoading] = useState(false);
@@ -135,20 +122,38 @@ export default function Locations({ eventId }){
   }, [eventId]);
 
   // Helpers
-  function makePinIcon(name, color){
-    const safeName = (name || 'Lokacija').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const c = color || '#8888ff';
-    return L.divIcon({
-      className: 'pin-divicon',
-      html: `
-        <div class="pin-wrap">
-          <div class="pin-label" style="background:${c}">${safeName}</div>
-          <div class="pin-tail" style="border-top-color:${c}"></div>
-        </div>
-      `,
-      iconSize: [1, 1],
-      iconAnchor: [10, 24] // približno dno "repa" na koordinati
-    });
+  function polygonCentroid(poly){
+    // poly: [[lat,lng], ...] zatvoren implicitno (poslednja tačka == prva nije potrebna)
+    if (!Array.isArray(poly) || poly.length < 3) return null;
+
+    let area = 0, cx = 0, cy = 0;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++){
+      const [y1, x1] = poly[j]; // lat, lng
+      const [y2, x2] = poly[i];
+      const cross = (x1 * y2) - (x2 * y1);
+      area += cross;
+      cx += (x1 + x2) * cross;
+      cy += (y1 + y2) * cross;
+    }
+    area *= 0.5;
+    if (Math.abs(area) < 1e-9){
+      // skoro degenerisan poligon -> prosečna tačka
+      const avg = poly.reduce((s, p) => [s[0] + p[0], s[1] + p[1]], [0,0]);
+      return [avg[0] / poly.length, avg[1] / poly.length];
+    }
+    return [cy / (6 * area), cx / (6 * area)]; // [lat, lng]
+  }
+
+  function getAreaName(a){
+    return a?.Naziv ?? a?.naziv ?? a?.Ime ?? a?.ime ?? 'Područje';
+  }
+
+  function getSupplierName(s){
+    return s?.ImeIPrezime
+        ?? [s?.Ime, s?.Prezime].filter(Boolean).join(' ')
+        ?? s?.Naziv ?? s?.naziv
+        ?? s?.KorisnickoIme
+        ?? 'Dobavljač';
   }
 
   function pointInPolygonLatLng([lat, lng], poly){
@@ -187,7 +192,12 @@ export default function Locations({ eventId }){
     } else if (typeof raw === 'string') {
       try { positions = JSON.parse(raw); } catch { positions = []; }
     }
-    const center = positions[0] || [44.8125, 20.4612];
+    const center = useMemo(() => {
+      if (Array.isArray(positions) && positions.length >= 3){
+        return polygonCentroid(positions) || positions[0];
+      }
+      return positions?.[0] || [44.8125, 20.4612];
+    }, [positions]);
 
     function ClickCatcher(){
       useMapEvents({
@@ -233,22 +243,6 @@ export default function Locations({ eventId }){
       </div>
     );
   }
-
-
-  function pointInPolygonLatLng([lat, lng], poly){
-    // poly: [[lat,lng], ...]
-    let inside = false;
-    for (let i=0, j=poly.length-1; i<poly.length; j=i++){
-      const [y1, x1] = poly[i];
-      const [y2, x2] = poly[j];
-      const intersect = ((y1 > lat) !== (y2 > lat)) &&
-                        (lng < (x2 - x1) * (lat - y1) / ((y2 - y1) || 1e-12) + x1);
-      if (intersect) inside = !inside;
-    }
-    return inside;
-  }
-
-
 
   function resetEditor(){
     setLocId(null);
@@ -301,7 +295,13 @@ export default function Locations({ eventId }){
       if (!selSupplier){ setTypesForSupplier([]); setSelType(''); setResources([]); setSelResource(''); return; }
       try{
         const resAll = await locationsApi.listResourcesForSupplier(selSupplier);
-        const types = Array.from(new Set((resAll||[]).map(r => r?.Tip || r?.tip || r?.Type || r?.type).filter(Boolean)));
+        const types = Array.from(
+          new Set(
+            (resAll || [])
+              .map(r => String(r?.Tip ?? r?.tip ?? r?.Type ?? r?.type ?? ''))
+              .filter(t => t.trim().length > 0)
+          )
+        );
         setTypesForSupplier(types);
         setSelType('');
         setResources([]);
@@ -364,7 +364,7 @@ export default function Locations({ eventId }){
         naziv: r?.Naziv || r?.naziv || 'Resurs',
         tip: r?.Tip || r?.tip || selType,
         kolicina: k,
-        dobavljacIme: (suppliers.find(s=> (s?.Id||s?._id||s?.id)===selSupplier)?.ImePrezime) || 'Dobavljač'
+        dobavljacIme: getSupplierName(suppliers.find(s => String(s?.Id||s?._id||s?.id) === String(selSupplier))) || 'Dobavljač'
       }
     ]));
     // reset selekcije
@@ -508,7 +508,7 @@ export default function Locations({ eventId }){
     const cy = poly.reduce((s,p)=>s+p[1],0)/poly.length;
 
     // Ako baš želiš tačan klik, morao bi pravi projekcioni sistem; za sada: dozvoli centroid.
-    if (!pointInPolygon([cx, cy], poly)){
+    if (!pointInPolygonLatLng([cx, cy], poly)){
       toast.error('Pin mora biti unutar izabranog područja.');
       return;
     }
@@ -553,7 +553,7 @@ export default function Locations({ eventId }){
               </div>
               <div>
                 <div className="label">Područje</div>
-                <div>{loc?.PodrucjeNaziv || loc?.Podrucje || '-'}</div>
+                <div>{getAreaName(loc) || '-'}</div>
               </div>
               <div>
                 <div className="label">Koordinate</div>
@@ -601,7 +601,7 @@ export default function Locations({ eventId }){
                   <option value="">-- izaberi --</option>
                   {(areas||[]).map(a => (
                     <option key={getAreaId(a)} value={getAreaId(a)}>
-                      {a?.Naziv || 'Područje'}
+                      {getAreaName(a)}
                     </option>
                   ))}
                 </select>
@@ -699,7 +699,7 @@ export default function Locations({ eventId }){
               <select className="select" value={selSupplier} onChange={e=>setSelSupplier(e.target.value)} disabled={lock}>
                 <option value="">-- izaberi --</option>
                 {(suppliers||[]).map(s=>(
-                  <option key={s?.Id||s?._id} value={s?.Id||s?._id}>{s?.ImePrezime || s?.Naziv || 'Dobavljač'}</option>
+                  <option key={s?.Id||s?._id} value={s?.Id||s?._id}>{getSupplierName(s)}</option>
                 ))}
               </select>
 

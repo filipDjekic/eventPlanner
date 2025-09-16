@@ -40,8 +40,7 @@ namespace EventOrganizerAPI.Controllers
             return Ok(lokacija);
         }
 
-        [HttpPut("azuriraj")]
-        [Authorize(Roles = "Organizator")]
+        [HttpPut("azuriraj/{id}")]
         public async Task<IActionResult> Azuriraj([FromBody] AzurirajLokacijuDto dto)
         {
             var uspeh = await _lokacijaServis.AzurirajLokacijuAsync(dto);
