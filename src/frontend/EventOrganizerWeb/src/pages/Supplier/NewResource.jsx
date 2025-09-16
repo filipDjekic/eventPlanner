@@ -60,7 +60,7 @@ export default function NewResource() {
       const payload = {
         Naziv: (form.Naziv ?? "").trim(),
         Opis: (form.Opis ?? "").trim(),
-        Tip: tipIndex,
+        Tip: form.Tip,
         UkupnoKolicina: Number(form.UkupnoKolicina),
         Dobavljac: userId,
       };

@@ -73,10 +73,14 @@ export default function Locations({ eventId }){
 
   const getAreaId = (a) => String(a?.Id ?? a?._id ?? a?.id ?? '');
 
-  const selectedArea = useMemo(
-    () => areas.find(a => getAreaId(a) === String(podrucjeId || '')),
-    [areas, podrucjeId]
-  );
+  const selectedArea = useMemo(() => {
+    const id = String(podrucjeId || '');
+    // primarno po ID
+    let hit = areas.find(a => getAreaId(a) === id);
+    // fallback: ako backend nekad u lokaciji čuva naziv umesto ID-a
+    if (!hit) hit = areas.find(a => String(a?.Naziv || '') === id);
+    return hit;
+  }, [areas, podrucjeId]);
 
   // --- LOADERS ---
   async function loadAreas(){
@@ -176,7 +180,13 @@ export default function Locations({ eventId }){
   }
 
   function PinPickerLeaflet({ area, color, name, pin, onChangePin, onClose, onSave }){
-    const positions = Array.isArray(area?.Koordinate) ? area.Koordinate : [];
+    let positions = [];
+    const raw = area?.Koordinate ?? area?.koordinate ?? [];
+    if (Array.isArray(raw)) {
+      positions = raw;
+    } else if (typeof raw === 'string') {
+      try { positions = JSON.parse(raw); } catch { positions = []; }
+    }
     const center = positions[0] || [44.8125, 20.4612];
 
     function ClickCatcher(){
@@ -261,19 +271,29 @@ export default function Locations({ eventId }){
 
   function beginCreate(){ resetEditor(); setShowEditor(true); }
   function beginEdit(loc){
-    setPodrucjeId(String(loc?.Podrucje || loc?.PodrucjeId || ''));
+    // uvek kreni od čistog stanja
     resetEditor();
     setShowEditor(true);
-    setLocId(loc?.Id || loc?._id || loc?.id);
+
+    // IZVADI ID PODRUČJA kao string, bez obzira šta backend šalje
+    const areaId =
+      String(
+        loc?.PodrucjeId ??
+        loc?.Podrucje ??   // ako backend šalje samo "Podrucje" (može biti guid ili broj)
+        ''
+      );
+
+    setLocId(loc?.Id || loc?._id || loc?.id || null);
     setNaziv(loc?.Naziv || '');
     setOpis(loc?.Opis || '');
-    setPodrucjeId(loc?.Podrucje || loc?.PodrucjeId || '');
+    setPodrucjeId(areaId);                      // <<< KLJUČNO: u state ide samo ID kao string
     setTip(loc?.TipLokacije || '');
     setHex(isHex(loc?.HEXboja) ? loc.HEXboja : (TIP_LOKACIJA[loc?.TipLokacije] || DEFAULT_COLOR));
     setPin({ x: loc?.XKoordinata ?? null, y: loc?.YKoordinata ?? null });
-    setReserved(Array.isArray(loc?.ResursiEx) ? loc.ResursiEx : []); // ako backend vraća proširene resurse
-    setLock(true); // po zahtevu: nakon "Sačuvaj" dugme je "Izmeni", pa forma locked
+    setReserved(Array.isArray(loc?.ResursiEx) ? loc.ResursiEx : []);
+    setLock(true);
   }
+
 
   // Supplier/Type/Resource chain
   useEffect(() => {
@@ -305,11 +325,12 @@ export default function Locations({ eventId }){
   }, [selSupplier, selType]);
 
   function availableQty(res){
-    const total = Number(res?.Ukupno || res?.ukupno || res?.Kolicina || res?.kolicina || 0);
-    const reserved = Number(res?.Rezervisano || res?.rezervisano || 0);
+    const total = Number(res?.UkupnoKolicina ?? res?.ukupnoKolicina ?? 0);
+    const reserved = Number(res?.RezervisanoKolicina ?? res?.rezervisanoKolicina ?? 0);
     const free = Math.max(0, total - reserved);
-    return isFinite(free) ? free : 0;
+    return Number.isFinite(free) ? free : 0;
   }
+
 
   async function addResource(){
     if (!selSupplier || !selType || !selResource){
