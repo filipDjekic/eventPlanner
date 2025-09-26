@@ -47,3 +47,25 @@
   border-top: 8px solid #8888ff; /* boja se prepisuje inline-om */
 }
 .map-canvas { height: 420px; }
+
+/* ----- Tabela finese ----- */
+.loc-table th, .loc-table td { vertical-align: middle; }
+.loc-table th.num, .loc-table td.num { text-align: right; width: 100px; }
+.loc-table .center { text-align: center; }
+.loc-table .muted { color: #999; }
+.loc-res-table .label { margin-bottom: 8px; display: block; }
+
+/* ----- Modal za opis ----- */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.modal {
+  background: #0f0f0f; border: 1px solid #333; border-radius: 12px; width: min(640px, 92vw);
+  box-shadow: 0 10px 30px rgba(0,0,0,.45); padding: 12px;
+}
+.modal-head {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+}
+.modal-title { font-weight: 700; }
+.modal-body { color: #ddd; line-height: 1.5; white-space: pre-wrap; }

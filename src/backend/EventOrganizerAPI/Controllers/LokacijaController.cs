@@ -19,7 +19,6 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpPost("kreiraj")]
-        [Authorize(Roles = "Organizator")]
         public async Task<IActionResult> Kreiraj([FromBody] KreirajLokacijuDto dto)
         {
             var lokacija = await _lokacijaServis.KreirajLokacijuAsync(dto);
@@ -49,7 +48,6 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpDelete("obrisi/{id}")]
-        [Authorize(Roles = "Organizator")]
         public async Task<IActionResult> Obrisi(string id)
         {
             var uspeh = await _lokacijaServis.ObrisiLokacijuAsync(id);

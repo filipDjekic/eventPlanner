@@ -3,7 +3,7 @@ import api from './api';
 
 /** Učitaj događaj da bi dobili Kapacitet, Beskonacno i postojeće karte (ako API vraća) */
 export async function fetchEvent(eventId){
-  const { data } = await api.get(`dogadjaj/${eventId}`);
+  const { data } = await api.get(`dogadjaj/vrati-po-id/${eventId}`);
   return data;
 }
 

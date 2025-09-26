@@ -59,8 +59,10 @@ export default function Areas({ eventId }){
           DatumOdrzavanja: normalizeDateString(d?.DatumOdrzavanja ?? d?.datumOdrzavanja ?? d?.datum),
         })).filter(x => !!x.Id);
 
-        setDays(dayObjs.sort((a,b)=> (Date.parse(a.DatumOdrzavanja||'')||0) - (Date.parse(b.DatumOdrzavanja||'')||0)));
-
+        if (mounted){
+          setDays(sortDays(dayObjs));
+          setAreas(mapped);
+        }
         
         // 2) Postojeća područja
         const existing = await areasApi.getForEvent(eventId);
@@ -248,6 +250,10 @@ export default function Areas({ eventId }){
 
   async function onDelete(idx){
     const a = areas[idx];
+    if (Array.isArray(a?.Lokacije) && a.Lokacije.length){
+      toast.error('Područje sadrži lokacije. Najpre odkačite lokacije ili koristite „Obriši i odkači“.');
+      return;
+    }
     if (!a?.Id){ setAreas(prev => prev.filter((_,i)=>i!==idx)); return; }
     try{
       setLoading(true);
@@ -264,6 +270,7 @@ export default function Areas({ eventId }){
       setLoading(false);
     }
   }
+
 
   return (
     <div className="ar-wrap">
