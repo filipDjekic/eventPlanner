@@ -17,7 +17,7 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpPost("kreiraj")]
-        [Authorize(Roles = "Organizator")]
+        
         public async Task<IActionResult> Kreiraj([FromBody] KreirajStavkuDto dto)
         {
             var stavka = await _stavkaServis.KreirajStavkuAsync(dto);
@@ -40,7 +40,7 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpPut("azuriraj/{id}")]
-        [Authorize(Roles = "Organizator")]
+        
         public async Task<IActionResult> Azuriraj([FromBody] AzurirajStavkuDto dto)
         {
             var success = await _stavkaServis.AzurirajStavkuAsync(dto);
@@ -49,7 +49,7 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpDelete("obrisi/{id}")]
-        [Authorize(Roles = "Organizator")]
+        
         public async Task<IActionResult> Obrisi(string id)
         {
             var success = await _stavkaServis.ObrisiStavkuAsync(id);

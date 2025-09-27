@@ -18,7 +18,6 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpPost("kreiraj")]
-        [Authorize(Roles = "Organizator")]
         public async Task<IActionResult> Kreiraj([FromBody] KreirajCenovnikDto dto)
         {
             var cenovnik = await _cenovnikServis.KreirajCenovnikAsync(dto);
@@ -41,7 +40,6 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpPut("azuriraj/{id}")]
-        [Authorize(Roles = "Organizator")]
         public async Task<IActionResult> Azuriraj([FromBody] AzurirajCenovnikDto dto)
         {
             var result = await _cenovnikServis.AzurirajCenovnikAsync(dto);
@@ -50,7 +48,7 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpDelete("obrisi/{id}")]
-        [Authorize(Roles = "Organizator")]
+        
         public async Task<IActionResult> Obrisi(string id)
         {
             var success = await _cenovnikServis.ObrisiCenovnikAsync(id);
@@ -59,7 +57,7 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpPost("dodaj-stavku/{cenovnikId}/stavke/{stavkaId}")]
-        [Authorize(Roles = "Organizator")]
+        
         public async Task<IActionResult> DodajStavku(string cenovnikId, string stavkaId)
         {
             var result = await _cenovnikServis.DodajStavkuAsync(cenovnikId, stavkaId);
@@ -68,7 +66,7 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpDelete("obrisi-stavku/{cenovnikId}/stavke/{stavkaId}")]
-        [Authorize(Roles = "Organizator")]
+        
         public async Task<IActionResult> UkloniStavku(string cenovnikId, string stavkaId)
         {
             var result = await _cenovnikServis.UkloniStavkuAsync(cenovnikId, stavkaId);
