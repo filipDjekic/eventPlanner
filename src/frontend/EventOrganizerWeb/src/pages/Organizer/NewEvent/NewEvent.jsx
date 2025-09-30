@@ -5,6 +5,7 @@ import Tickets from './Tickets';
 import Days from './Days';
 import Areas from './Areas';
 import Locations from './Locations';
+import PriceList from './PriceList';
 
 export default function NewEvent(){
   const [eventId, setEventId] = useState(null);
@@ -30,6 +31,7 @@ export default function NewEvent(){
       <Days eventId={eventId} />
       <Areas eventId={eventId} />
       <Locations eventId={eventId} />
+      <PriceList eventId={eventId} />
     </div>
   );
 }
