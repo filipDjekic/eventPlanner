@@ -27,7 +27,7 @@ namespace EventOrganizerAPI.Models
         public string Dogadjaj { get; set; }
 
         [BsonRepresentation(BsonType.String)]
-        public TipAktivnosti Tip { get; set; }
+        public string Tip { get; set; }
 
         [BsonRepresentation(BsonType.ObjectId)]
         public List<string> Notifikacije { get; set; } = new();

@@ -14,7 +14,7 @@ namespace EventOrganizerAPI.DTOs.RasporedAktivnosti
         public string Lokacija { get; set; }
         public string Dan { get; set; }
         public string Dogadjaj { get; set; }
-        public TipAktivnosti Tip { get; set; }
+        public string Tip { get; set; }
         public List<string> Notifikacije { get; set; }
         public List<string> Resursi { get; set; }
     }

@@ -66,8 +66,8 @@ namespace EventOrganizerAPI.Services
                 update = update.Set(x => x.Dan, dto.Dan);
             if (dto.Dogadjaj != null)
                 update = update.Set(x => x.Dogadjaj, dto.Dogadjaj);
-            if (dto.Tip.HasValue)
-                update = update.Set(x => x.Tip, dto.Tip.Value);
+            if (dto.Tip != null)
+                update = update.Set(x => x.Tip, dto.Tip);
 
             await _aktivnosti.UpdateOneAsync(x => x.Id == dto.Id, update);
         }
