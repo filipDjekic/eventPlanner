@@ -1,9 +1,11 @@
 // src/pages/Organizer/NewEvent/BasicInfo.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import '../../../styles/NewEvent/basicinfo.css'; // FIX: one more ../
 import toast from 'react-hot-toast';
+
+import Section from './Section';
+import '../../../styles/NewEvent/basicinfo.css';
 import { getAuth } from '../../../utils/auth';
-import * as basicinfoApi from '../../../services/basicinfoapi';
+import * as basicInfoApi from '../../../services/basicInfoApi';
 import * as neweventApi from '../../../services/newEventApi';
 
 const KATEGORIJE = ['utakmica', 'protest', 'vašar', 'žurka', 'festival', 'ostalo'];
@@ -239,14 +241,14 @@ export default function BasicInfo({ eventId, onEventId, onBasicInfoChange }){
       try{
         setBusy(true);
         if(!eventId){
-          const created = await basicinfoApi.createDraft(payload);
+          const created = await basicInfoApi.createDraft(payload);
           const id = created?.id || created?.Id || created;
           if(id){
             onEventId?.(id);
             toast.success('Draft događaja je kreiran.');
           }
         }else{
-          await basicinfoApi.updateDraft(eventId, payload);
+          await basicInfoApi.updateDraft(eventId, payload);
         }
       }catch(err){
         const msg = err?.response?.data || 'Greška pri automatskom čuvanju.';
@@ -323,9 +325,20 @@ export default function BasicInfo({ eventId, onEventId, onBasicInfoChange }){
     }
   }
 
+  const headerBadges = [
+    busy ? { label: 'Sačuvaj u toku', tone: 'info' } : null,
+    eventId
+      ? { label: `Draft ID ${eventId}`, tone: 'success' }
+      : { label: 'Draft nije kreiran', tone: 'warning' }
+  ].filter(Boolean);
 
   return (
-    <div className="form-card space-y-5">
+    <Section
+      title="Osnovne informacije"
+      subtitle="Popuni ključne detalje o događaju. Kada ispuniš obavezna polja automatski kreiramo draft koji koriste ostale sekcije."
+      badges={headerBadges}
+    >
+      <div className="space-y-6">
       {/* Naziv / Lokacija */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label className="block">
@@ -452,6 +465,7 @@ export default function BasicInfo({ eventId, onEventId, onBasicInfoChange }){
           <img className="img-thumb" src={imgPreview} alt="preview" />
         )}
       </div>
-    </div>
+      </div>
+    </Section>
   );
 }

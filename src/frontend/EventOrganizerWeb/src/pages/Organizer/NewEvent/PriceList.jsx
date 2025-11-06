@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
+import Section from './Section';
 import '../../../styles/NewEvent/pricelist.css';
 
 import * as locationsApi from '../../../services/locationsApi';
@@ -577,33 +578,60 @@ export default function PriceList({ eventId }){
     return match?.Naziv || match?.naziv || 'Lokacija';
   }, [locations]);
 
-  return (
-    <section className="pl-section">
-      <div className="pl-header">
-        <h2>Cenovnik</h2>
-        {existingLists.length > 0 && (
-          <select
-            className="pl-select-existing"
-            value={selectedListId}
-            onChange={handleSelectExisting}
-            disabled={loading || saving || mode === 'creating' || mode === 'editing'}
-          >
-            <option value="">-- Novi cenovnik --</option>
-            {existingLists.map((pl) => (
-              <option key={pl.Id} value={pl.Id}>
-                {pl.Naziv || 'Cenovnik'} · {locationNameById(pl.LokacijaId)}
-              </option>
-            ))}
-          </select>
-        )}
-        {mode === 'idle' && (
-          <button className="pl-btn pl-btn-inline" onClick={startNew} disabled={!hasEvent || loading}>Novi cenovnik</button>
-        )}
-      </div>
+  const modeBadge = (() => {
+    if (mode === 'creating') return { label: 'U izradi', tone: 'info' };
+    if (mode === 'editing') return { label: 'Uređivanje', tone: 'info' };
+    return existingLists.length ? { label: 'Postojeći cenovnik', tone: 'success' } : { label: 'Nema cenovnika', tone: 'warning' };
+  })();
 
-      <div className="pl-topbar">
-        <span className="pl-badge">{mode === 'creating' ? 'U izradi' : mode === 'editing' ? 'Uređivanje' : existingLists.length ? 'Postojeći cenovnik' : 'Nema cenovnika'}</span>
-        {loading && <span className="pl-subtitle">Učitavanje...</span>}
+  const headerBadges = [
+    loading ? { label: 'Učitavanje...', tone: 'info' } : null,
+    saving ? { label: 'Čuvanje...', tone: 'info' } : null,
+    modeBadge,
+    { label: `Stavki: ${items.length || 0}` },
+  ].filter(Boolean);
+
+  const headerActions = (
+    <div className="pl-header-controls">
+      {existingLists.length > 0 && (
+        <select
+          className="pl-select-existing"
+          value={selectedListId}
+          onChange={handleSelectExisting}
+          disabled={loading || saving || mode === 'creating' || mode === 'editing'}
+        >
+          <option value="">-- Novi cenovnik --</option>
+          {existingLists.map((pl) => (
+            <option key={pl.Id} value={pl.Id}>
+              {pl.Naziv || 'Cenovnik'} · {locationNameById(pl.LokacijaId)}
+            </option>
+          ))}
+        </select>
+      )}
+      {mode === 'idle' && (
+        <button className="pl-btn pl-btn-inline" onClick={startNew} disabled={!hasEvent || loading}>Novi cenovnik</button>
+      )}
+    </div>
+  );
+
+  const statusText = (() => {
+    if (!hasEvent) return 'Sačuvaj događaj pre dodavanja cenovnika.';
+    if (mode === 'creating') return 'Popunjavaš novi cenovnik — dodaj stavke i sačuvaj kada završiš.';
+    if (mode === 'editing') return 'Ažuriraš postojeći cenovnik. Sačuvaj izmene ili odustani.';
+    if (!existingLists.length) return 'Za ovaj događaj još uvek nema kreiranih cenovnika.';
+    return 'Pregled postojećih cenovnika. Izaberi drugi sa liste ili započni novi.';
+  })();
+
+  return (
+    <Section
+      title="Cenovnici"
+      subtitle="Poveži lokacije sa ponudom proizvoda i usluga dostupnih posetiocima."
+      badges={headerBadges}
+      actions={headerActions}
+    >
+      <div className="pl-status">
+        <span>{statusText}</span>
+        {loading && <span className="pl-status__hint">Učitavanje podataka…</span>}
       </div>
 
       <div className="pl-meta">
@@ -753,6 +781,6 @@ export default function PriceList({ eventId }){
       {!hasEvent && (
         <p className="pl-message">Sačuvaj osnovne informacije o događaju da bi mogao da dodaš cenovnik.</p>
       )}
-    </section>
+    </Section>
   );
 }

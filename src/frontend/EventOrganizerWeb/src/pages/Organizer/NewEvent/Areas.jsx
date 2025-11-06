@@ -1,6 +1,8 @@
 // src/pages/Organizer/NewEvent/Areas.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+
+import Section from './Section';
 import '../../../styles/NewEvent/areas.css';
 import * as areasApi from '../../../services/areasApi';
 import * as daysApi from '../../../services/daysApi'; // koristimo za dropdown dana
@@ -272,16 +274,26 @@ export default function Areas({ eventId }){
   }
 
 
-  return (
-    <div className="ar-wrap">
-      <div className="ar-head">
-        <div className="ar-title">Područja</div>
-        <div className="ar-spacer" />
-        {/* Koristim tvoj tekst: "Dodaj porcuje" */}
-        <button className="ar-btn" disabled={disabledAll || loading} onClick={addAreaCard}>Dodaj porcuje</button>
-      </div>
+  const headerBadges = [
+    loading ? { label: 'Učitavanje...', tone: 'info' } : null,
+    !eventId ? { label: 'Draft nije kreiran', tone: 'warning' } : null,
+    { label: `Područja: ${areas.length || 0}` },
+  ].filter(Boolean);
 
-      {!eventId && <div className="ar-note">Kreiraj draft događaja u "Basic info" da bi uređivao područja.</div>}
+  const addAreaButton = (
+    <button className="ar-btn" disabled={disabledAll || loading} onClick={addAreaCard}>
+      Dodaj područje
+    </button>
+  );
+
+  return (
+    <Section
+      title="Područja"
+      subtitle="Obeleži segmente događaja i poveži ih sa lokacijama i resursima."
+      badges={headerBadges}
+      actions={addAreaButton}
+    >
+      {!eventId && <div className="ar-note">Kreiraj draft događaja u "Osnovnim informacijama" da bi uređivao područja.</div>}
 
       {eventId && (
         <div className="ar-list">
@@ -300,7 +312,7 @@ export default function Areas({ eventId }){
           ))}
         </div>
       )}
-    </div>
+    </Section>
   );
 }
 

@@ -1,55 +1,27 @@
 /* src/styles/NewEvent/pricelist.css */
 
-.pl-section {
-  margin-top: 32px;
-  border: 1px solid var(--ne-border);
-  border-radius: 20px;
-  padding: 24px;
-  background: var(--ne-surface);
-  box-shadow: var(--ne-shadow-sm);
-  color: var(--ne-text);
-}
 
-.pl-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.pl-header h2 {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--ne-text-strong);
-}
-
-.pl-header .pl-subtitle {
-  margin-left: auto;
-  font-size: 0.95rem;
-  color: var(--ne-text-muted);
-}
-
-.pl-header .pl-btn-inline {
-  margin-left: auto;
-}
-
-.pl-topbar {
+.pl-header-controls {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 18px;
 }
 
-.pl-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--ne-pill-bg);
-  color: var(--ne-pill-text);
-  font-weight: 600;
+.pl-header-controls select {
+  min-width: 240px;
+}
+
+.pl-status {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  color: var(--ne-text-muted);
+  font-size: 0.95rem;
+}
+
+.pl-status__hint {
   font-size: 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--ne-text-faint);
 }
 
 .pl-meta {

@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
+import Section from './Section';
 import '../../../styles/NewEvent/activities.css';
 
 import * as daysApi from '../../../services/daysApi';
@@ -364,12 +365,16 @@ export default function Activities({ eventId }){
   const disableForm = !hasEvent || saving;
 
   return (
-    <section className="act-wrap">
-      <div className="act-head">
-        <h2>Aktivnosti i raspored</h2>
-        {loading && <span className="act-badge">Učitavanje…</span>}
-      </div>
-
+    <Section
+      title="Aktivnosti i raspored"
+      subtitle="Planiraj program događaja kroz aktivnosti, njihove lokacije i termine."
+      badges={[
+        loading ? { label: 'Učitavanje...', tone: 'info' } : null,
+        saving ? { label: 'Čuvanje...', tone: 'info' } : null,
+        !hasEvent ? { label: 'Draft nije kreiran', tone: 'warning' } : null,
+        { label: `Aktivnosti: ${activities.length || 0}` },
+      ].filter(Boolean)}
+    >
       {!hasEvent && (
         <div className="act-note">Sačuvaj osnovne informacije o događaju da bi dodavao aktivnosti.</div>
       )}
@@ -538,6 +543,6 @@ export default function Activities({ eventId }){
           </table>
         </div>
       </div>
-    </section>
+    </Section>
   );
 }

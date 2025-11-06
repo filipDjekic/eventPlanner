@@ -10,6 +10,7 @@ import Areas from './Areas';
 import Locations from './Locations';
 import PriceList from './PriceList';
 import Activities from './Activities';
+import Section from './Section';
 
 import '../../../styles/NewEvent/NewEvent.css';
 
@@ -109,29 +110,48 @@ export default function NewEvent(){
   };
 
   return (
-    <div className="ne-container">
-      <h1 className="ne-title">Novi događaj</h1>
-      <p className="ne-subtitle">Popuni osnovne informacije. Kada sačuvaš obavezna polja, automatski pravimo draft događaja.</p>
+    <div className="ne-page">
+      <div className="ne-page__glow" aria-hidden />
+      <div className="ne-page__glow ne-page__glow--secondary" aria-hidden />
 
-      <BasicInfo
-        eventId={eventId}
-        onEventId={(id) => setEventId(id)}
-        onBasicInfoChange={({ capacity, infinite }) => {
-          setCapFromBasic(capacity);
-          setInfFromBasic(!!infinite);
-        }}
-      />
-      <Tickets eventId={eventId} initialCapacity={capFromBasic} initialInfinite={infFromBasic} />
-      <Days eventId={eventId} />
-      <Areas eventId={eventId} />
-      <Locations eventId={eventId} />
-      <PriceList eventId={eventId} />
-      <Activities eventId={eventId} />
+      <div className="ne-container">
+        <div className="ne-hero">
+          <span className="ne-hero__badge">Kreiraj događaj</span>
+          <h1 className="ne-title">Novi događaj</h1>
+          <p className="ne-subtitle">Popuni osnovne informacije i poveži sve podforme kako bi kreirao kompletan događaj spreman za objavu.</p>
+        </div>
 
-      <div className="publish-bar">
-        <button className="publish-btn" onClick={openPublishModal} disabled={!eventId}>
-          Publish događaj
-        </button>
+        <BasicInfo
+          eventId={eventId}
+          onEventId={(id) => setEventId(id)}
+          onBasicInfoChange={({ capacity, infinite }) => {
+            setCapFromBasic(capacity);
+            setInfFromBasic(!!infinite);
+          }}
+        />
+        <Tickets eventId={eventId} initialCapacity={capFromBasic} initialInfinite={infFromBasic} />
+        <Days eventId={eventId} />
+        <Areas eventId={eventId} />
+        <Locations eventId={eventId} />
+        <PriceList eventId={eventId} />
+        <Activities eventId={eventId} />
+
+        <Section
+          title="Objava događaja"
+          subtitle="Pregledaj kompletan draft i objavi događaj kada si spreman da ga podeliš sa posetiocima."
+          badges={[
+            eventId ? { label: `Draft ID ${eventId}`, tone: 'success' } : { label: 'Draft nije kreiran', tone: 'warning' },
+            publishState.published ? { label: 'Objavljeno', tone: 'success' } : { label: 'U pripremi', tone: 'info' },
+            publishState.loading ? { label: 'Priprema...', tone: 'info' } : null,
+          ].filter(Boolean)}
+          actions={(
+            <button className="publish-btn" onClick={openPublishModal} disabled={!eventId}>
+              Objavi događaj
+            </button>
+          )}
+        >
+          <p className="publish-hint">Objava je moguća tek nakon što popuniš sve obavezne sekcije i sačuvaš draft.</p>
+        </Section>
       </div>
 
       {publishState.open && (

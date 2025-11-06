@@ -33,15 +33,145 @@
   --ne-input-shadow-focus: 0 0 0 3px rgba(139, 92, 246, 0.25);
 }
 html, body, #root { height: 100%; }
-body { @apply bg-bg text-white; }
 
-.form-card { @apply bg-bg-2 border border-white/10 rounded-xl2 p-6 shadow-soft; }
-.input { @apply w-full bg-bg-3 border border-white/10 rounded-lg px-3 py-2 outline-none focus:border-primary; }
-.label { @apply text-sm text-white/80; }
-.btn { @apply px-4 py-2 rounded-xl2 font-medium transition active:scale-[.98]; }
-.btn-primary { @apply bg-primary hover:bg-primary/90 text-white; }
-.btn-subtle { @apply bg-white/10 hover:bg-white/15; }
-.link { @apply text-accent hover:underline; }
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  color: var(--ne-text);
+  background:
+    radial-gradient(circle at 20% -10%, rgba(59, 130, 246, 0.18), transparent 60%),
+    radial-gradient(circle at 80% 0%, rgba(236, 72, 153, 0.12), transparent 55%),
+    #05060c;
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.form-card {
+  background: rgba(18, 18, 27, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  padding: 28px;
+  box-shadow: 0 18px 44px rgba(6, 8, 20, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.input {
+  width: 100%;
+  background: var(--ne-input-bg);
+  border: 1px solid var(--ne-input-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: var(--ne-text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, transform 0.12s ease;
+  appearance: none;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--ne-input-border-focus);
+  box-shadow: var(--ne-input-shadow-focus);
+}
+
+.input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+textarea.input {
+  resize: vertical;
+  min-height: 120px;
+}
+
+select.input {
+  background-image: linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.35) 50%),
+    linear-gradient(135deg, rgba(255,255,255,0.35) 50%, transparent 50%);
+  background-position: calc(100% - 16px) calc(50% - 3px), calc(100% - 11px) calc(50% - 3px);
+  background-size: 7px 7px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+
+.label {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ne-text-muted);
+  font-weight: 600;
+}
+
+.btn {
+  border-radius: 14px;
+  border: 1px solid transparent;
+  font-weight: 600;
+  padding: 10px 18px;
+  color: var(--ne-text);
+  background: var(--ne-btn-secondary);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.btn:not(:disabled):hover {
+  background: var(--ne-btn-secondary-hover);
+  border-color: var(--ne-border-strong);
+  transform: translateY(-1px);
+}
+
+.btn:not(:disabled):active {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-primary {
+  background: var(--ne-btn-primary);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 12px 32px rgba(139, 92, 246, 0.4);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: var(--ne-btn-primary-hover);
+  transform: translateY(-1px);
+}
+
+.btn-subtle {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--ne-text-muted);
+}
+
+.btn-subtle:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--ne-text);
+}
+
+.link {
+  color: #c4b5fd;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.link:hover {
+  color: #f472b6;
+  text-decoration: underline;
+}
 
 /* Shared helpers for new-event forms */
 .ne-panel {
