@@ -28,6 +28,16 @@
   transform: translateY(-1px);
 }
 
+.dy-btn.dy-btn-danger {
+  background: var(--ne-btn-danger);
+  color: #fff;
+  border-color: transparent;
+}
+
+.dy-btn.dy-btn-danger:not(:disabled):hover {
+  background: var(--ne-btn-danger-hover);
+}
+
 /* Info poruka */
 .dy-note {
   margin-bottom: 12px;
@@ -143,4 +153,22 @@
 /* Zaključano stanje – suptilno priguši inputs */
 .dy-card.is-locked .input {
   opacity: 0.75;
+}
+
+.dy-summary {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dy-summary-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--ne-text-strong);
+}
+
+.dy-summary-desc {
+  font-size: 0.95rem;
+  color: var(--ne-text-muted);
 }

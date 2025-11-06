@@ -18,5 +18,7 @@ namespace EventOrganizerAPI.DTOs.Dogadjaj
         public string Kategorija { get; set; }
         public List<string> Napomene { get; set; } = new List<string>();
         public List<string> Resursi { get; set; } = new List<string>();
+        public List<string> Cenovnici { get; set; } = new List<string>();
+        public List<string> Aktivnosti { get; set; } = new List<string>();
     }
 }

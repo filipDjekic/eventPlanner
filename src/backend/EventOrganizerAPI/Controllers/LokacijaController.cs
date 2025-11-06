@@ -40,8 +40,9 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpPut("azuriraj/{id}")]
-        public async Task<IActionResult> Azuriraj([FromBody] AzurirajLokacijuDto dto)
+        public async Task<IActionResult> Azuriraj(string id, [FromBody] AzurirajLokacijuDto dto)
         {
+            dto.Id = id;
             var uspeh = await _lokacijaServis.AzurirajLokacijuAsync(dto);
             if (!uspeh) return BadRequest("Neuspešna izmena lokacije.");
             return Ok("Lokacija uspešno ažurirana.");

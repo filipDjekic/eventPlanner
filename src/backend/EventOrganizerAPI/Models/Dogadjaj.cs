@@ -40,6 +40,14 @@ namespace EventOrganizerAPI.Models
         [BsonRepresentation(BsonType.ObjectId)]
         public List<string> Dani { get; set; } = new List<string>();
 
+        [BsonElement("cenovnici")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public List<string> Cenovnici { get; set; } = new List<string>();
+
+        [BsonElement("aktivnosti")]
+        [BsonRepresentation(BsonType.ObjectId)]
+        public List<string> Aktivnosti { get; set; } = new List<string>();
+
         [BsonElement("prijavljeni")]
         public List<string> Prijavljeni { get; set; } = new List<string>();
 

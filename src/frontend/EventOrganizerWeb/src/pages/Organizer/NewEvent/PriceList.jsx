@@ -7,6 +7,7 @@ import '../../../styles/NewEvent/pricelist.css';
 
 import * as locationsApi from '../../../services/locationsApi';
 import * as priceListApi from '../../../services/priceListApi';
+import * as neweventApi from '../../../services/newEventApi';
 
 const EMPTY_ITEM = {
   Naziv: '',
@@ -45,6 +46,7 @@ export default function PriceList({ eventId }){
   const [selectedListId, setSelectedListId] = useState('');
 
   const [mode, setMode] = useState('idle'); // idle | creating | view | editing
+  const [viewExpanded, setViewExpanded] = useState(false);
 
   const [name, setName] = useState('');
   const [locationId, setLocationId] = useState('');
@@ -80,6 +82,7 @@ export default function PriceList({ eventId }){
     setRemovedIds([]);
     setItemForm({ ...EMPTY_ITEM });
     setEditingItemLocalId(null);
+    setViewExpanded(false);
   }, []);
 
   const applyPriceListData = useCallback((result, signal) => {
@@ -97,6 +100,7 @@ export default function PriceList({ eventId }){
     setItemForm({ ...EMPTY_ITEM });
     setEditingItemLocalId(null);
     setMode(id ? 'view' : 'idle');
+    setViewExpanded(false);
   }, []);
 
   const fetchPriceListData = useCallback(async (listId, signal) => {
@@ -154,6 +158,13 @@ export default function PriceList({ eventId }){
       if (shouldStop()) return;
       setExistingLists(normalizedLists);
 
+      if (eventId){
+        const ids = normalizedLists.map((pl) => pl.Id).filter(Boolean);
+        try {
+          await neweventApi.updatePriceListIds(eventId, ids);
+        } catch {}
+      }
+
       let idToUse = '';
       if (preferredId && normalizedLists.some((pl) => String(pl.Id) === String(preferredId))){
         idToUse = preferredId;
@@ -187,7 +198,7 @@ export default function PriceList({ eventId }){
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [eventId, applyPriceListData, fetchPriceListData, resetForm]);
+  }, [eventId, applyPriceListData, fetchPriceListData, filterPriceableLocations, resetForm]);
 
   useEffect(() => {
     if (!eventId) return;
@@ -397,6 +408,7 @@ export default function PriceList({ eventId }){
       setMode('view');
       setPreviousListId('');
     }
+    setViewExpanded(false);
   };
 
   const handleSaveNew = async () => {
@@ -469,6 +481,7 @@ export default function PriceList({ eventId }){
       setSelectedListId('');
       setMode('idle');
       setPreviousListId('');
+      setViewExpanded(false);
       resetForm();
       await fetchListsAndApply();
     } catch {
@@ -541,24 +554,19 @@ export default function PriceList({ eventId }){
     }
   };
 
+  const beginEdit = useCallback(() => {
+    if (!currentListId) return;
+    setPreviousListId(currentListId);
+    setViewExpanded(false);
+    setMode('editing');
+  }, [currentListId]);
+
   const renderControls = () => {
     if (mode === 'creating'){
       return (
         <div className="pl-controls">
           <button className="pl-btn" onClick={handleSaveNew} disabled={saving}>Sačuvaj</button>
           <button className="pl-btn pl-secondary" onClick={handleCancel} disabled={saving}>Otkaži</button>
-        </div>
-      );
-    }
-    if (mode === 'view'){
-      const beginEdit = () => {
-        setPreviousListId(currentListId);
-        setMode('editing');
-      };
-      return (
-        <div className="pl-controls">
-          <button className="pl-btn" onClick={beginEdit} disabled={saving}>Izmeni</button>
-          <button className="pl-btn pl-danger" onClick={handleDelete} disabled={saving}>Obriši</button>
         </div>
       );
     }
@@ -569,6 +577,9 @@ export default function PriceList({ eventId }){
           <button className="pl-btn pl-secondary" onClick={handleCancel} disabled={saving}>Odustani</button>
         </div>
       );
+    }
+    if (mode === 'view'){
+      return null;
     }
     return (
       <div className="pl-controls">
@@ -612,7 +623,7 @@ export default function PriceList({ eventId }){
           ))}
         </select>
       )}
-      {mode === 'idle' && (
+      {(mode === 'idle' || mode === 'view') && (
         <button className="pl-btn pl-btn-inline" onClick={startNew} disabled={!hasEvent || loading}>Novi cenovnik</button>
       )}
     </div>
@@ -638,147 +649,204 @@ export default function PriceList({ eventId }){
         {loading && <span className="pl-status__hint">Učitavanje podataka…</span>}
       </div>
 
-      <div className="pl-meta">
-        <div className="pl-field">
-          <label>Naziv cenovnika</label>
-          <input
-            className="pl-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={!isEditable}
-            placeholder="npr. Pića"
-          />
+      {mode === 'view' ? (
+        <div className="pl-summary-card">
+          <div className="pl-summary-head">
+            <div className="pl-summary-info">
+              <h3>{name || 'Cenovnik'}</h3>
+              <span>{locationId ? locationNameById(locationId) : 'Lokacija nije dodeljena'}</span>
+            </div>
+            <div className="pl-summary-actions">
+              <button className="pl-btn" type="button" onClick={beginEdit} disabled={saving}>Izmeni</button>
+              <button className="pl-btn pl-danger" type="button" onClick={handleDelete} disabled={saving}>Obriši</button>
+              <button
+                className="pl-btn pl-secondary"
+                type="button"
+                onClick={() => setViewExpanded((prev) => !prev)}
+                disabled={saving || items.length === 0}
+              >
+                {viewExpanded ? 'Sakrij stavke' : 'Prikaži stavke'}
+              </button>
+            </div>
+          </div>
+          <div className="pl-summary-meta">
+            <span>Stavki: {items.length || 0}</span>
+          </div>
+          {viewExpanded && (
+            <div className="pl-summary-table">
+              <table className="pl-table pl-table--compact">
+                <thead>
+                  <tr>
+                    <th>Naziv</th>
+                    <th>Opis</th>
+                    <th>Cena</th>
+                    <th>Količina</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.length === 0 && (
+                    <tr>
+                      <td className="pl-empty" colSpan={4}>Nema stavki u cenovniku.</td>
+                    </tr>
+                  )}
+                  {items.map((item) => (
+                    <tr key={item.localId}>
+                      <td>{item.Naziv}</td>
+                      <td>{item.Opis || <span className="pl-hint">Nema opisa</span>}</td>
+                      <td>{Number(item.Cena || 0).toLocaleString('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RSD</td>
+                      <td>{Number(item.Kolicina || 0).toLocaleString('sr-RS')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-        <div className="pl-field">
-          <label>Lokacija</label>
-          <select
-            className="pl-select"
-            value={locationId}
-            onChange={(e) => setLocationId(e.target.value)}
-            disabled={!isEditable}
-          >
-            <option value="">-- Odaberi lokaciju --</option>
-            {locations.map((loc) => {
-              const id = String(locationsApi.normalizeId(loc) || '');
-              return (
-                <option key={id} value={id}>{loc?.Naziv || loc?.naziv || 'Lokacija'}</option>
-              );
-            })}
-          </select>
-        </div>
-      </div>
-
-      <div className="pl-content">
-        <div className="pl-form-wrap">
-          <form className="pl-item-form" onSubmit={addOrUpdateItem}>
-            <h3>{editingItemLocalId ? 'Izmeni stavku' : 'Nova stavka'}</h3>
+      ) : (
+        <>
+          <div className="pl-meta">
             <div className="pl-field">
-              <label>Naziv stavke</label>
+              <label>Naziv cenovnika</label>
               <input
                 className="pl-input"
-                value={itemForm.Naziv}
-                onChange={(e) => handleItemFieldChange('Naziv', e.target.value)}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 disabled={!isEditable}
-                placeholder="npr. Espresso"
+                placeholder="npr. Pića"
               />
             </div>
             <div className="pl-field">
-              <label>Opis</label>
-              <textarea
-                className="pl-textarea"
-                value={itemForm.Opis}
-                onChange={(e) => handleItemFieldChange('Opis', e.target.value)}
+              <label>Lokacija</label>
+              <select
+                className="pl-select"
+                value={locationId}
+                onChange={(e) => setLocationId(e.target.value)}
                 disabled={!isEditable}
-                rows={3}
-                placeholder="Dodatne informacije"
-              />
+              >
+                <option value="">-- Odaberi lokaciju --</option>
+                {locations.map((loc) => {
+                  const id = String(locationsApi.normalizeId(loc) || '');
+                  return (
+                    <option key={id} value={id}>{loc?.Naziv || loc?.naziv || 'Lokacija'}</option>
+                  );
+                })}
+              </select>
             </div>
-            <div className="pl-item-grid">
-              <div className="pl-field">
-                <label>Cena (RSD)</label>
-                <input
-                  className="pl-input"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={itemForm.Cena}
-                  onChange={(e) => handleItemFieldChange('Cena', e.target.value)}
-                  disabled={!isEditable}
-                />
-              </div>
-              <div className="pl-field">
-                <label>Količina</label>
-                <input
-                  className="pl-input"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={itemForm.Kolicina}
-                  onChange={(e) => handleItemFieldChange('Kolicina', e.target.value)}
-                  disabled={!isEditable}
-                />
-              </div>
-            </div>
-            <div className="pl-field">
-              <label>Slika (opciono)</label>
-              <input
-                className="pl-file"
-                type="file"
-                onChange={(e) => handleItemFile(e.target.files?.[0] || null)}
-                disabled={!isEditable}
-              />
-              {itemForm.UrlSlika && <span className="pl-hint">{itemForm.UrlSlika}</span>}
-            </div>
-            <div className="pl-row-actions">
-              <button className="pl-btn" type="submit" disabled={!isEditable}>{editingItemLocalId ? 'Sačuvaj stavku' : 'Dodaj stavku'}</button>
-              {editingItemLocalId && (
-                <button className="pl-btn pl-secondary" type="button" onClick={handleCancelItemEdit}>Otkaži</button>
-              )}
-            </div>
-          </form>
-        </div>
+          </div>
 
-        <div className="pl-table-wrap">
-          <table className="pl-table">
-            <thead>
-              <tr>
-                <th>Naziv</th>
-                <th>Opis</th>
-                <th>Cena</th>
-                <th>Količina</th>
-                {isEditable && <th>Akcije</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 && (
-                <tr>
-                  <td className="pl-empty" colSpan={isEditable ? 5 : 4}>Nema stavki u cenovniku.</td>
-                </tr>
-              )}
-              {items.map((item) => (
-                <tr key={item.localId}>
-                  <td>
-                    {item.Naziv}
-                    {item.status === 'new' && <span className="pl-pill">novo</span>}
-                    {item.status === 'updated' && <span className="pl-pill">izmena</span>}
-                  </td>
-                  <td>{item.Opis || <span className="pl-hint">Nema opisa</span>}</td>
-                  <td>{Number(item.Cena || 0).toLocaleString('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RSD</td>
-                  <td>{Number(item.Kolicina || 0).toLocaleString('sr-RS')}</td>
-                  {isEditable && (
-                    <td>
-                      <div className="pl-row-actions">
-                        <button className="pl-btn pl-secondary" onClick={() => handleEditItem(item.localId)} type="button">Uredi</button>
-                        <button className="pl-btn pl-danger" onClick={() => handleRemoveItem(item.localId)} type="button">Ukloni</button>
-                      </div>
-                    </td>
+          <div className="pl-content">
+            <div className="pl-form-wrap">
+              <form className="pl-item-form" onSubmit={addOrUpdateItem}>
+                <h3>{editingItemLocalId ? 'Izmeni stavku' : 'Nova stavka'}</h3>
+                <div className="pl-field">
+                  <label>Naziv stavke</label>
+                  <input
+                    className="pl-input"
+                    value={itemForm.Naziv}
+                    onChange={(e) => handleItemFieldChange('Naziv', e.target.value)}
+                    disabled={!isEditable}
+                    placeholder="npr. Espresso"
+                  />
+                </div>
+                <div className="pl-field">
+                  <label>Opis</label>
+                  <textarea
+                    className="pl-textarea"
+                    value={itemForm.Opis}
+                    onChange={(e) => handleItemFieldChange('Opis', e.target.value)}
+                    disabled={!isEditable}
+                    rows={3}
+                    placeholder="Dodatne informacije"
+                  />
+                </div>
+                <div className="pl-item-grid">
+                  <div className="pl-field">
+                    <label>Cena (RSD)</label>
+                    <input
+                      className="pl-input"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={itemForm.Cena}
+                      onChange={(e) => handleItemFieldChange('Cena', e.target.value)}
+                      disabled={!isEditable}
+                    />
+                  </div>
+                  <div className="pl-field">
+                    <label>Količina</label>
+                    <input
+                      className="pl-input"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={itemForm.Kolicina}
+                      onChange={(e) => handleItemFieldChange('Kolicina', e.target.value)}
+                      disabled={!isEditable}
+                    />
+                  </div>
+                </div>
+                <div className="pl-field">
+                  <label>Slika (opciono)</label>
+                  <input
+                    className="pl-file"
+                    type="file"
+                    onChange={(e) => handleItemFile(e.target.files?.[0] || null)}
+                    disabled={!isEditable}
+                  />
+                  {itemForm.UrlSlika && <span className="pl-hint">{itemForm.UrlSlika}</span>}
+                </div>
+                <div className="pl-row-actions">
+                  <button className="pl-btn" type="submit" disabled={!isEditable}>{editingItemLocalId ? 'Sačuvaj stavku' : 'Dodaj stavku'}</button>
+                  {editingItemLocalId && (
+                    <button className="pl-btn pl-secondary" type="button" onClick={handleCancelItemEdit}>Otkaži</button>
                   )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                </div>
+              </form>
+            </div>
+
+            <div className="pl-table-wrap">
+              <table className="pl-table">
+                <thead>
+                  <tr>
+                    <th>Naziv</th>
+                    <th>Opis</th>
+                    <th>Cena</th>
+                    <th>Količina</th>
+                    {isEditable && <th>Akcije</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.length === 0 && (
+                    <tr>
+                      <td className="pl-empty" colSpan={isEditable ? 5 : 4}>Nema stavki u cenovniku.</td>
+                    </tr>
+                  )}
+                  {items.map((item) => (
+                    <tr key={item.localId}>
+                      <td>
+                        {item.Naziv}
+                        {item.status === 'new' && <span className="pl-pill">novo</span>}
+                        {item.status === 'updated' && <span className="pl-pill">izmena</span>}
+                      </td>
+                      <td>{item.Opis || <span className="pl-hint">Nema opisa</span>}</td>
+                      <td>{Number(item.Cena || 0).toLocaleString('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RSD</td>
+                      <td>{Number(item.Kolicina || 0).toLocaleString('sr-RS')}</td>
+                      {isEditable && (
+                        <td>
+                          <div className="pl-row-actions">
+                            <button className="pl-btn pl-secondary" onClick={() => handleEditItem(item.localId)} type="button">Uredi</button>
+                            <button className="pl-btn pl-danger" onClick={() => handleRemoveItem(item.localId)} type="button">Ukloni</button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
 
       {renderControls()}
 

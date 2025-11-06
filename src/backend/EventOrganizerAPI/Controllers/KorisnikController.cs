@@ -34,8 +34,9 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpPut("azuriraj/{id}")]
-        public async Task<IActionResult> Azuriraj([FromBody] AzurirajKorisnikDto dto)
+        public async Task<IActionResult> Azuriraj(string id, [FromBody] AzurirajKorisnikDto dto)
         {
+            dto.Id = id;
             await _servis.Azuriraj(dto);
             return NoContent();
         }
@@ -54,7 +55,7 @@ namespace EventOrganizerAPI.Controllers
             if (!uspeh)
                 return BadRequest("Kupovina nije uspela.");
 
-            return Ok("Uspeöno kupljena karta.");
+            return Ok("Uspe≈°no kupljena karta.");
         }
         [HttpPost("balans")]
         public async Task<IActionResult> DodajBalans([FromBody] DodajBalansDto dto)

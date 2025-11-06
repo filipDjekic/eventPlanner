@@ -79,6 +79,62 @@
   margin-top: 16px;
 }
 
+.pl-summary-card {
+  border: 1px solid var(--ne-border);
+  border-radius: 18px;
+  background: var(--ne-surface-alt);
+  padding: 18px;
+  box-shadow: var(--ne-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pl-summary-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.pl-summary-info h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: var(--ne-text-strong);
+}
+
+.pl-summary-info span {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--ne-text-muted);
+}
+
+.pl-summary-actions {
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pl-summary-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+  color: var(--ne-text-muted);
+}
+
+.pl-summary-table {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.pl-table--compact th,
+.pl-table--compact td {
+  padding: 10px 12px;
+}
+
 .pl-btn {
   padding: 10px 18px;
   border-radius: 12px;

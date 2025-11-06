@@ -14,6 +14,8 @@ namespace EventOrganizerAPI.Models
         public decimal Cena { get; set; }
         public int Kolicina { get; set; }
         public string UrlSlika { get; set; }
+        [BsonRepresentation(BsonType.ObjectId)]
+        public string CenovnikId { get; set; }
 
     }
 }
