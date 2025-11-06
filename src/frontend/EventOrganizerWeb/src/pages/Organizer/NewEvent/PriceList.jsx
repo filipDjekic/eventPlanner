@@ -665,47 +665,6 @@ export default function PriceList({ eventId }){
       </div>
 
       <div className="pl-content">
-        <div className="pl-table-wrap">
-          <table className="pl-table">
-            <thead>
-              <tr>
-                <th>Naziv</th>
-                <th>Opis</th>
-                <th>Cena</th>
-                <th>Količina</th>
-                {isEditable && <th>Akcije</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 && (
-                <tr>
-                  <td className="pl-empty" colSpan={isEditable ? 5 : 4}>Nema stavki u cenovniku.</td>
-                </tr>
-              )}
-              {items.map((item) => (
-                <tr key={item.localId}>
-                  <td>
-                    {item.Naziv}
-                    {item.status === 'new' && <span className="pl-pill">novo</span>}
-                    {item.status === 'updated' && <span className="pl-pill">izmena</span>}
-                  </td>
-                  <td>{item.Opis || <span className="pl-hint">Nema opisa</span>}</td>
-                  <td>{Number(item.Cena || 0).toLocaleString('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RSD</td>
-                  <td>{Number(item.Kolicina || 0).toLocaleString('sr-RS')}</td>
-                  {isEditable && (
-                    <td>
-                      <div className="pl-row-actions">
-                        <button className="pl-btn pl-secondary" onClick={() => handleEditItem(item.localId)} type="button">Uredi</button>
-                        <button className="pl-btn pl-danger" onClick={() => handleRemoveItem(item.localId)} type="button">Ukloni</button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
         <div className="pl-form-wrap">
           <form className="pl-item-form" onSubmit={addOrUpdateItem}>
             <h3>{editingItemLocalId ? 'Izmeni stavku' : 'Nova stavka'}</h3>
@@ -773,6 +732,47 @@ export default function PriceList({ eventId }){
               )}
             </div>
           </form>
+        </div>
+
+        <div className="pl-table-wrap">
+          <table className="pl-table">
+            <thead>
+              <tr>
+                <th>Naziv</th>
+                <th>Opis</th>
+                <th>Cena</th>
+                <th>Količina</th>
+                {isEditable && <th>Akcije</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {items.length === 0 && (
+                <tr>
+                  <td className="pl-empty" colSpan={isEditable ? 5 : 4}>Nema stavki u cenovniku.</td>
+                </tr>
+              )}
+              {items.map((item) => (
+                <tr key={item.localId}>
+                  <td>
+                    {item.Naziv}
+                    {item.status === 'new' && <span className="pl-pill">novo</span>}
+                    {item.status === 'updated' && <span className="pl-pill">izmena</span>}
+                  </td>
+                  <td>{item.Opis || <span className="pl-hint">Nema opisa</span>}</td>
+                  <td>{Number(item.Cena || 0).toLocaleString('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RSD</td>
+                  <td>{Number(item.Kolicina || 0).toLocaleString('sr-RS')}</td>
+                  {isEditable && (
+                    <td>
+                      <div className="pl-row-actions">
+                        <button className="pl-btn pl-secondary" onClick={() => handleEditItem(item.localId)} type="button">Uredi</button>
+                        <button className="pl-btn pl-danger" onClick={() => handleRemoveItem(item.localId)} type="button">Ukloni</button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 

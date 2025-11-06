@@ -615,6 +615,46 @@ export default function Locations({ eventId }){
           )}
 
           <div className="loc-res-wrap">
+            <div className="loc-res-form">
+              <h3 className="loc-res-title">Dodaj resurs</h3>
+              <label className="loc-res-field">
+                <span>Dobavljač</span>
+                <select className="select" value={selSupplier} onChange={e=>setSelSupplier(e.target.value)} disabled={lock}>
+                  <option value="">-- izaberi --</option>
+                  {suppliers.map(s => {
+                    const id = String(normalizeId(s));
+                    const name = s?.Naziv || s?.naziv || 'Dobavljač';
+                    return <option key={id} value={id}>{name}</option>;
+                  })}
+                </select>
+              </label>
+
+              <label className="loc-res-field">
+                <span>Resurs</span>
+                <select className="select" value={selResource} onChange={e=>setSelResource(e.target.value)} disabled={lock || !selSupplier}>
+                  <option value="">-- izaberi --</option>
+                  {(selSupplier ? filteredResources : resources).map(r => {
+                    const id = String(normalizeId(r));
+                    const name = r?.Naziv || r?.naziv || 'Resurs';
+                    const tip = r?.Tip || r?.tip || '';
+                    return <option key={id} value={id}>{name} · {tip}</option>;
+                  })}
+                </select>
+              </label>
+              {selSupplier && filteredResources.length === 0 && (
+                <div className="ar-note">Ovaj dobavljač nema dostupne resurse.</div>
+              )}
+
+              <label className="loc-res-field">
+                <span>Količina</span>
+                <input className="input" type="number" value={qty} onChange={e=>setQty(e.target.value)} disabled={lock || !selResource} />
+              </label>
+
+              <div className="loc-res-actions">
+                <button className="ar-btn" onClick={addResource} disabled={lock}>Dodaj resurs</button>
+              </div>
+            </div>
+
             <div className="loc-res-table">
               <div className="label">Rezervisani resursi</div>
               <table className="loc-table">
@@ -648,39 +688,6 @@ export default function Locations({ eventId }){
                   )}
                 </tbody>
               </table>
-            </div>
-
-            <div className="loc-res-form">
-              <div className="label">Dobavljač</div>
-              <select className="select" value={selSupplier} onChange={e=>setSelSupplier(e.target.value)} disabled={lock}>
-                <option value="">-- izaberi --</option>
-                {suppliers.map(s => {
-                  const id = String(normalizeId(s));
-                  const name = s?.Naziv || s?.naziv || 'Dobavljač';
-                  return <option key={id} value={id}>{name}</option>;
-                })}
-              </select>
-
-              <div className="label" style={{ marginTop: 8 }}>Resurs</div>
-              <select className="select" value={selResource} onChange={e=>setSelResource(e.target.value)} disabled={lock || !selSupplier}>
-                <option value="">-- izaberi --</option>
-                {(selSupplier ? filteredResources : resources).map(r => {
-                  const id = String(normalizeId(r));
-                  const name = r?.Naziv || r?.naziv || 'Resurs';
-                  const tip = r?.Tip || r?.tip || '';
-                  return <option key={id} value={id}>{name} · {tip}</option>;
-                })}
-              </select>
-              {selSupplier && filteredResources.length === 0 && (
-                <div className="ar-note">Ovaj dobavljač nema dostupne resurse.</div>
-              )}
-
-              <div className="label" style={{ marginTop: 8 }}>Količina</div>
-              <input className="input" type="number" value={qty} onChange={e=>setQty(e.target.value)} disabled={lock || !selResource} />
-
-              <div style={{ marginTop: 10 }}>
-                <button className="ar-btn" onClick={addResource} disabled={lock}>Dodaj resurs</button>
-              </div>
             </div>
           </div>
 
