@@ -34,7 +34,7 @@ export async function remove(id){
 /** Pomoćno: filtriranja na klijentu */
 export async function getForEvent(eventId){
   const all = await getAll();
-  return all.filter(a => a?.DogadjajId === eventId);
+  return all.filter(a => String(a?.DogadjajId ?? a?.dogadjajId ?? '') === String(eventId));
 }
 export async function getForDay(dayId){
   const all = await getAll();

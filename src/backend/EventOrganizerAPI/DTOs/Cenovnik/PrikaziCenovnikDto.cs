@@ -7,6 +7,7 @@ namespace EventOrganizerAPI.DTOs.Cenovnik
         public string Id { get; set; }
         public string Naziv { get; set; }
         public string LokacijaId { get; set; }
+        public string DogadjajId { get; set; }
         public List<string> StavkeIds { get; set; }
     }
 }

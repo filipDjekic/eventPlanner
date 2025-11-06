@@ -43,7 +43,7 @@ export default function NewEvent(){
       ticketsApi.fetchTickets(id).catch(() => []),
       daysApi.listForEventApi(id).catch(() => []),
       locationsApi.listByEvent(id).catch(() => []),
-      priceListApi.listAll().catch(() => []),
+      priceListApi.listByEvent(id).catch(() => []),
       activitiesApi.listByEvent(id).catch(() => []),
     ]);
 

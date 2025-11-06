@@ -13,6 +13,12 @@ export async function listAll(){
   return Array.isArray(data) ? data : [];
 }
 
+export async function listByEvent(eventId){
+  if(!eventId) return [];
+  const { data } = await api.get(`${PRICE_LIST_BASE}/dogadjaj/${eventId}`);
+  return Array.isArray(data) ? data : [];
+}
+
 export async function getById(id){
   if(!id) return null;
   const { data } = await api.get(`${PRICE_LIST_BASE}/vrati-po-id/${id}`);
@@ -23,6 +29,7 @@ export async function createPriceList(dto){
   const payload = {
     Naziv: dto?.Naziv || dto?.naziv || '',
     LokacijaId: dto?.LokacijaId || dto?.lokacijaId || '',
+    DogadjajId: dto?.DogadjajId || dto?.dogadjajId || '',
     StavkeIds: Array.isArray(dto?.StavkeIds) ? dto.StavkeIds : [],
   };
   const { data } = await api.post(`${PRICE_LIST_BASE}/kreiraj`, payload);
@@ -34,6 +41,7 @@ export async function updatePriceList(id, dto){
     Id: id,
     Naziv: dto?.Naziv || dto?.naziv,
     LokacijaId: dto?.LokacijaId || dto?.lokacijaId,
+    DogadjajId: dto?.DogadjajId || dto?.dogadjajId,
     StavkeIds: Array.isArray(dto?.StavkeIds) ? dto.StavkeIds : dto?.stavkeIds,
   };
   const { data } = await api.put(`${PRICE_LIST_BASE}/azuriraj/${id}`, payload);

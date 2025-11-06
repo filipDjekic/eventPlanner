@@ -11,6 +11,18 @@ import * as activitiesApi from '../../../services/activitiesApi';
 
 const TIPOVI_AKTIVNOSTI = ['Koncert', 'Predavanje', 'Igrica', 'Izlozba', 'Radionica', 'Druzenje', 'Ostalo'];
 
+const TIP_LOKACIJA_COLORS = {
+  BINA: '#e11d48',
+  ULAZ: '#1d4ed8',
+  WC: '#16a34a',
+  INFO: '#9333ea',
+  VIP: '#f59e0b',
+  BAR: '#0ea5e9',
+  HRANA: '#10b981',
+  PARKING: '#64748b',
+  BEZBEDNOST: '#ef4444',
+};
+
 function normalizeDay(raw, index = 0){
   const id = raw?.Id || raw?._id || raw?.id || raw?.ID || raw?._id?.$oid;
   if (!id) return null;
@@ -30,11 +42,12 @@ function normalizeDay(raw, index = 0){
 function normalizeLocation(raw){
   const id = locationsApi.normalizeId(raw);
   if (!id) return null;
+  const rawType = String(raw?.TipLokacije || raw?.tipLokacije || raw?.Tip || raw?.tip || '').toUpperCase();
   return {
     Id: id,
     Naziv: raw?.Naziv || raw?.naziv || 'Lokacija',
     Tip: raw?.TipLokacije || raw?.tipLokacije || raw?.Tip || raw?.tip || '',
-    Color: raw?.HEXboja || raw?.hexBoja || raw?.Boja || '#1f6feb',
+    Color: TIP_LOKACIJA_COLORS[rawType] || raw?.HEXboja || raw?.hexBoja || raw?.Boja || '#1f6feb',
   };
 }
 

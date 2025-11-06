@@ -18,8 +18,9 @@ export async function listAll(){
 
 export async function listByEvent(eventId){
   if(!eventId) return [];
-  const all = await listAll();
-  return all.filter(item => matchesEvent(item, eventId));
+  const { data } = await api.get(`aktivnosti/dogadjaj/${eventId}`);
+  const list = Array.isArray(data) ? data : [];
+  return list.filter(item => matchesEvent(item, eventId));
 }
 
 export async function create(dto){
