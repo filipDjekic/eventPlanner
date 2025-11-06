@@ -11,6 +11,9 @@ namespace EventOrganizerAPI.DTOs.Cenovnik
         [Required]
         public string LokacijaId { get; set; }
 
+        [Required]
+        public string DogadjajId { get; set; }
+
         public List<string> StavkeIds { get; set; } = new();
     }
 }

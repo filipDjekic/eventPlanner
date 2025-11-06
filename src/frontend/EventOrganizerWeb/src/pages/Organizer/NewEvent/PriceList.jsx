@@ -125,7 +125,7 @@ export default function PriceList({ eventId }){
     try {
       const [locsRaw, lists] = await Promise.all([
         locationsApi.listByEvent(eventId).catch(() => []),
-        priceListApi.listAll().catch(() => []),
+        priceListApi.listByEvent(eventId).catch(() => []),
       ]);
       if (shouldStop()) return;
 
@@ -144,6 +144,7 @@ export default function PriceList({ eventId }){
           Id: pl?.Id || pl?.id || pl?._id || '',
           LokacijaId: pl?.LokacijaId || pl?.lokacijaId || '',
           Naziv: pl?.Naziv || pl?.naziv || '',
+          DogadjajId: pl?.DogadjajId || pl?.dogadjajId || eventId,
         }))
         .filter((pl) => {
           if (locationIds.size === 0) return true;
@@ -405,6 +406,7 @@ export default function PriceList({ eventId }){
       const payload = {
         Naziv: name.trim(),
         LokacijaId: locationId,
+        DogadjajId: eventId,
         StavkeIds: [],
       };
       const created = await priceListApi.createPriceList(payload);
@@ -433,6 +435,7 @@ export default function PriceList({ eventId }){
       await priceListApi.updatePriceList(createdId, {
         Naziv: name.trim(),
         LokacijaId: locationId,
+        DogadjajId: eventId,
         StavkeIds: createdIds,
       }).catch(() => {});
 
@@ -521,6 +524,7 @@ export default function PriceList({ eventId }){
       await priceListApi.updatePriceList(currentListId, {
         Naziv: name.trim(),
         LokacijaId: locationId,
+        DogadjajId: eventId,
         StavkeIds: idsForList,
       }).catch(() => {});
 

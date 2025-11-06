@@ -29,8 +29,6 @@ const TIP_LOKACIJA = {
 
 const DEFAULT_COLOR = '#1f6feb';
 const SORTABLE_COLUMNS = ['naziv', 'tip', 'kolicina', 'velicina', 'dobavljac'];
-
-function isHex(v){ return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v||''); }
 function normalizeId(x){ return x?.Id || x?._id || x?.id || null; }
 
 function polygonCentroid(poly){
@@ -144,7 +142,6 @@ export default function Locations({ eventId }){
   const [opis, setOpis] = useState('');
   const [podrucjeId, setPodrucjeId] = useState('');
   const [tip, setTip] = useState('');
-  const [hex, setHex] = useState(DEFAULT_COLOR);
   const [pin, setPin] = useState({ x:null, y:null });
   const [showMap, setShowMap] = useState(false);
 
@@ -157,6 +154,11 @@ export default function Locations({ eventId }){
 
   const [descModal, setDescModal] = useState({ open:false, title:'', text:'' });
   const [sortConfig, setSortConfig] = useState({ key: 'naziv', direction: 'asc' });
+
+  const typeColor = useMemo(() => {
+    const key = String(tip || '').toUpperCase();
+    return TIP_LOKACIJA[key]?.color || DEFAULT_COLOR;
+  }, [tip]);
 
   const openDesc = (r) => setDescModal({ open:true, title: r?.naziv || 'Resurs', text: r?.opis || 'Nema opisa.' });
   const closeDesc = () => setDescModal({ open:false, title:'', text:'' });
@@ -179,7 +181,7 @@ export default function Locations({ eventId }){
     try{
       setLoading(true);
       const [areasAll, locs, sups, ress] = await Promise.all([
-        areasApi.getAll().catch(() => []),
+        areasApi.getForEvent(eventId).catch(() => []),
         locationsApi.listByEvent(eventId).catch(() => []),
         api.get('dobavljaci/vrati-sve').then(r => r.data).catch(() => []),
         listAllResources().catch(() => []),
@@ -205,7 +207,7 @@ export default function Locations({ eventId }){
       if (!eventId) return;
       const detailId = e?.detail?.eventId;
       if (detailId && String(detailId) !== String(eventId)) return;
-      areasApi.getAll().then(list => setAreas(Array.isArray(list) ? list : [])).catch(() => {});
+      areasApi.getForEvent(eventId).then(list => setAreas(Array.isArray(list) ? list : [])).catch(() => {});
     }
     window.addEventListener('ne:areas:updated', onAreasUpdated);
     return () => window.removeEventListener('ne:areas:updated', onAreasUpdated);
@@ -271,7 +273,6 @@ export default function Locations({ eventId }){
     setOpis('');
     setPodrucjeId('');
     setTip('');
-    setHex(DEFAULT_COLOR);
     setPin({ x:null, y:null });
     setSelSupplier(''); setSelResource(''); setQty('');
     setReserved([]);
@@ -288,7 +289,6 @@ export default function Locations({ eventId }){
     setPodrucjeId(areaId);
     const t = String(loc?.TipLokacije || '');
     setTip(t);
-    setHex(loc?.HEXboja || TIP_LOKACIJA[t]?.color || DEFAULT_COLOR);
 
     const lat = Array.isArray(loc?.Koordinate) ? loc.Koordinate[0] : (loc?.XKoordinata ?? null);
     const lng = Array.isArray(loc?.Koordinate) ? loc.Koordinate[1] : (loc?.YKoordinata ?? null);
@@ -336,9 +336,6 @@ export default function Locations({ eventId }){
   const handleTipChange = (v) => {
     const vv = String(v || '');
     setTip(vv);
-    if (!hex || !isHex(hex)){
-      setHex(TIP_LOKACIJA[vv]?.color || DEFAULT_COLOR);
-    }
   };
 
   const handlePickOnMap = () => {
@@ -436,7 +433,6 @@ export default function Locations({ eventId }){
     if (!naziv.trim()){ toast.error('Unesi naziv.'); return; }
     if (!podrucjeId){ toast.error('Izaberi područje.'); return; }
     if (!tip){ toast.error('Izaberi tip.'); return; }
-    if (!isHex(hex)){ toast.error('HEX boja nije validna.'); return; }
     if (pin.x == null || pin.y == null){ toast.error('Postavi pin na mapi.'); return; }
 
     const base = {
@@ -448,7 +444,7 @@ export default function Locations({ eventId }){
       URLSlikeMape: '',
       CenovnikId: null,
       PodrucjeId: podrucjeId,
-      HEXboja: hex,
+      HEXboja: typeColor,
       TipLokacije: String(tip),
       Resursi: reserved.map(r => r.id).filter(Boolean),
     };
@@ -585,11 +581,10 @@ export default function Locations({ eventId }){
               </select>
             </div>
             <div>
-              <div className="label">HEX boja</div>
-              <div className="color-row">
-                <div className="color-swatch" style={{ background: hex }} />
-                <input className="input" value={hex} onChange={e=>setHex(e.target.value)} disabled={lock}/>
-                <input type="color" className="input" value={hex} onChange={e=>setHex(e.target.value)} disabled={lock}/>
+              <div className="label">Boja (prema tipu)</div>
+              <div className="color-row readonly">
+                <div className="color-swatch" style={{ background: typeColor }} />
+                <span className="color-code">{typeColor}</span>
               </div>
             </div>
             <div>
@@ -606,7 +601,7 @@ export default function Locations({ eventId }){
           {showMap && currentArea && (
             <PinPicker
               area={currentArea}
-              color={hex}
+              color={typeColor}
               name={naziv}
               pin={(Number.isFinite(pin.x) && Number.isFinite(pin.y)) ? [pin.x, pin.y] : null}
               onChangePin={(pos) => setPin({ x: pos[0], y: pos[1] })}

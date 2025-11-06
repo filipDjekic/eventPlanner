@@ -135,7 +135,7 @@ namespace EventOrganizerAPI
             builder.Services.AddScoped<INapomenaServis, NapomenaServis>();
             builder.Services.AddScoped<INotifikacijeServis, NotifikacijaServis>();
             builder.Services.AddScoped<IKartaServis, KartaServis>();
-            builder.Services.AddScoped<CenovnikServis>();
+            builder.Services.AddScoped<ICenovnikServis, CenovnikServis>();
             builder.Services.AddScoped<CenovnikStavkaServis>();
             builder.Services.AddScoped<LokacijaServis>();
             builder.Services.AddScoped<PodrucjeServis>();

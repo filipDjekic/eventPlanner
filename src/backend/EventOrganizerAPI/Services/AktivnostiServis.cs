@@ -45,6 +45,18 @@ namespace EventOrganizerAPI.Services
         public async Task<List<Aktivnost>> VratiSve() =>
             await _aktivnosti.Find(_ => true).ToListAsync();
 
+        public async Task<List<Aktivnost>> VratiZaDogadjaj(string dogadjajId)
+        {
+            if (string.IsNullOrWhiteSpace(dogadjajId))
+            {
+                return new List<Aktivnost>();
+            }
+
+            return await _aktivnosti
+                .Find(x => x.Dogadjaj == dogadjajId)
+                .ToListAsync();
+        }
+
         public async Task<Aktivnost> VratiPoId(string id) =>
             await _aktivnosti.Find(x => x.Id == id).FirstOrDefaultAsync();
 

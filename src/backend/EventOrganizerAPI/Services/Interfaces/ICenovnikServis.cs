@@ -9,6 +9,7 @@ namespace EventOrganizerAPI.Services.Interfaces
     {
         Task<Cenovnik> KreirajCenovnikAsync(KreirajCenovnikDto dto);
         Task<List<Cenovnik>> VratiSveCenovnikeAsync();
+        Task<List<Cenovnik>> VratiSveZaDogadjajAsync(string dogadjajId);
         Task<Cenovnik> VratiCenovnikPoIdAsync(string id);
         Task<bool> AzurirajCenovnikAsync(AzurirajCenovnikDto dto);
         Task<bool> ObrisiCenovnikAsync(string id);

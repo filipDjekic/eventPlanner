@@ -4,6 +4,7 @@ using EventOrganizerAPI.Services.Interfaces;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace EventOrganizerAPI.Services
@@ -11,10 +12,12 @@ namespace EventOrganizerAPI.Services
     public class CenovnikServis : ICenovnikServis
     {
         private readonly IMongoCollection<Cenovnik> _cenovnici;
+        private readonly IMongoCollection<Lokacija> _lokacije;
 
         public CenovnikServis(IMongoDatabase db)
         {
             _cenovnici = db.GetCollection<Cenovnik>("Cenovnici");
+            _lokacije = db.GetCollection<Lokacija>("Lokacije");
         }
 
         public async Task<Cenovnik> KreirajCenovnikAsync(KreirajCenovnikDto dto)
@@ -22,6 +25,7 @@ namespace EventOrganizerAPI.Services
             var cenovnik = new Cenovnik
             {
                 Naziv = dto.Naziv,
+                DogadjajId = dto.DogadjajId,
                 LokacijaId = dto.LokacijaId,
                 Stavke = new List<string>()
             };
@@ -41,6 +45,48 @@ namespace EventOrganizerAPI.Services
         public async Task<List<Cenovnik>> VratiSveCenovnikeAsync() =>
             await _cenovnici.Find(_ => true).ToListAsync();
 
+        public async Task<List<Cenovnik>> VratiSveZaDogadjajAsync(string dogadjajId)
+        {
+            if (string.IsNullOrWhiteSpace(dogadjajId))
+            {
+                return new List<Cenovnik>();
+            }
+
+            var rezultat = await _cenovnici
+                .Find(c => c.DogadjajId == dogadjajId)
+                .ToListAsync();
+
+            var fallbackFilter = Builders<Cenovnik>.Filter.Or(
+                Builders<Cenovnik>.Filter.Where(c => c.DogadjajId == null),
+                Builders<Cenovnik>.Filter.Eq(c => c.DogadjajId, string.Empty)
+            );
+
+            var fallback = await _cenovnici.Find(fallbackFilter).ToListAsync();
+
+            if (fallback.Count > 0)
+            {
+                var lokacijeDogadjaja = await _lokacije
+                    .Find(l => l.DogadjajId == dogadjajId)
+                    .Project(l => l.Id)
+                    .ToListAsync();
+
+                var lokacijaSet = new HashSet<string>(lokacijeDogadjaja ?? new List<string>());
+
+                foreach (var cen in fallback)
+                {
+                    if (!string.IsNullOrEmpty(cen.LokacijaId) && lokacijaSet.Contains(cen.LokacijaId))
+                    {
+                        if (!rezultat.Any(x => x.Id == cen.Id))
+                        {
+                            rezultat.Add(cen);
+                        }
+                    }
+                }
+            }
+
+            return rezultat;
+        }
+
         public async Task<Cenovnik> VratiCenovnikPoIdAsync(string id) =>
             await _cenovnici.Find(c => c.Id == id).FirstOrDefaultAsync();
 
@@ -56,6 +102,9 @@ namespace EventOrganizerAPI.Services
 
             if (!string.IsNullOrEmpty(dto.LokacijaId))
                 updateDef.Add(update.Set(c => c.LokacijaId, dto.LokacijaId));
+
+            if (!string.IsNullOrEmpty(dto.DogadjajId))
+                updateDef.Add(update.Set(c => c.DogadjajId, dto.DogadjajId));
 
             if (dto.StavkeIds != null)
             {

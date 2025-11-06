@@ -1,5 +1,5 @@
 using EventOrganizerAPI.DTOs.Cenovnik;
-using EventOrganizerAPI.Services;
+using EventOrganizerAPI.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
@@ -10,9 +10,9 @@ namespace EventOrganizerAPI.Controllers
     [Route("api/cenovnici")]
     public class CenovnikController : ControllerBase
     {
-        private readonly CenovnikServis _cenovnikServis;
+        private readonly ICenovnikServis _cenovnikServis;
 
-        public CenovnikController(CenovnikServis cenovnikServis)
+        public CenovnikController(ICenovnikServis cenovnikServis)
         {
             _cenovnikServis = cenovnikServis;
         }
@@ -28,6 +28,13 @@ namespace EventOrganizerAPI.Controllers
         public async Task<IActionResult> VratiSve()
         {
             var lista = await _cenovnikServis.VratiSveCenovnikeAsync();
+            return Ok(lista);
+        }
+
+        [HttpGet("dogadjaj/{dogadjajId}")]
+        public async Task<IActionResult> VratiZaDogadjaj(string dogadjajId)
+        {
+            var lista = await _cenovnikServis.VratiSveZaDogadjajAsync(dogadjajId);
             return Ok(lista);
         }
 
