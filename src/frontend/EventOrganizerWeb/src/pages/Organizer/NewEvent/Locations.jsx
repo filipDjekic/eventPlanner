@@ -27,6 +27,8 @@ const TIP_LOKACIJA = {
 };
 
 const DEFAULT_COLOR = '#1f6feb';
+const SORTABLE_COLUMNS = ['naziv', 'tip', 'kolicina', 'velicina', 'dobavljac'];
+
 function isHex(v){ return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v||''); }
 function normalizeId(x){ return x?.Id || x?._id || x?.id || null; }
 
@@ -56,7 +58,6 @@ function pointInPolygon([lat, lng], poly){
   return inside;
 }
 
-// Custom “kapsula” pin (plava pozadina + sivi krug + naziv)
 function makePillIcon({ text, color = '#0ea5e9' } = {}) {
   const safeText = String(text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const html = `
@@ -94,7 +95,7 @@ function PinPicker({ area, color, name, pin, onChangePin, onClose }){
         const { lat, lng } = e.latlng || {};
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
         if (!pointInPolygon([lat, lng], positions)) return;
-        onChangePin?.([lat, lng]); // čuva se u parent state-u
+        onChangePin?.([lat, lng]);
       }
     });
     return null;
@@ -154,34 +155,59 @@ export default function Locations({ eventId }){
   const [reserved, setReserved] = useState([]);
 
   const [descModal, setDescModal] = useState({ open:false, title:'', text:'' });
+  const [sortConfig, setSortConfig] = useState({ key: 'naziv', direction: 'asc' });
 
   const openDesc = (r) => setDescModal({ open:true, title: r?.naziv || 'Resurs', text: r?.opis || 'Nema opisa.' });
   const closeDesc = () => setDescModal({ open:false, title:'', text:'' });
 
+  const broadcastLocations = useCallback((list) => {
+    if (!eventId) return;
+    try{
+      window.dispatchEvent(new CustomEvent('ne:locations:updated', {
+        detail: { eventId, locations: list }
+      }));
+    }catch{}
+  }, [eventId]);
+
+  const loadInitial = useCallback(async () => {
+    if (!eventId){
+      setAreas([]);
+      setLocations([]);
+      return;
+    }
+    try{
+      setLoading(true);
+      const [areasAll, locs, sups, ress] = await Promise.all([
+        areasApi.getAll().catch(() => []),
+        locationsApi.listByEvent(eventId).catch(() => []),
+        api.get('dobavljaci/vrati-sve').then(r => r.data).catch(() => []),
+        listAllResources().catch(() => []),
+      ]);
+      setAreas(Array.isArray(areasAll) ? areasAll : []);
+      setLocations(Array.isArray(locs) ? locs : []);
+      broadcastLocations(Array.isArray(locs) ? locs : []);
+      setSuppliers(Array.isArray(sups) ? sups : []);
+      setResources(Array.isArray(ress) ? ress : []);
+    }catch{
+      toast.error('Ne mogu da učitam lokacije/područja ili resurse.');
+    }finally{
+      setLoading(false);
+    }
+  }, [eventId, broadcastLocations]);
+
   useEffect(() => {
-    let mounted = true;
-    (async () => {
+    loadInitial();
+  }, [loadInitial]);
+
+  useEffect(() => {
+    function onAreasUpdated(e){
       if (!eventId) return;
-      try{
-        setLoading(true);
-        const [areasAll, locs, sups, ress] = await Promise.all([
-          areasApi.getAll().catch(() => []),
-          locationsApi.listByEvent(eventId).catch(() => []),
-          api.get('dobavljaci/vrati-sve').then(r => r.data).catch(() => []),
-          listAllResources().catch(() => []),
-        ]);
-        if (!mounted) return;
-        setAreas(Array.isArray(areasAll) ? areasAll : []);
-        setLocations(Array.isArray(locs) ? locs : []);
-        setSuppliers(Array.isArray(sups) ? sups : []);
-        setResources(Array.isArray(ress) ? ress : []);
-      }catch{
-        toast.error('Ne mogu da učitam lokacije/područja ili resurse.');
-      }finally{
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => { mounted = false; };
+      const detailId = e?.detail?.eventId;
+      if (detailId && String(detailId) !== String(eventId)) return;
+      areasApi.getAll().then(list => setAreas(Array.isArray(list) ? list : [])).catch(() => {});
+    }
+    window.addEventListener('ne:areas:updated', onAreasUpdated);
+    return () => window.removeEventListener('ne:areas:updated', onAreasUpdated);
   }, [eventId]);
 
   const currentArea = useMemo(() => {
@@ -193,6 +219,49 @@ export default function Locations({ eventId }){
     const s = suppliers.find(x => String((x?.Id ?? x?._id ?? x?.id)) === String(id));
     return s?.Naziv || s?.naziv || '';
   };
+
+  const supplierMatchesResource = useCallback((res, supplierId) => {
+    const sid = res?.DobavljacId ?? res?.dobavljacId ?? res?.Dobavljac ?? res?.dobavljac ?? res?.SupplierId;
+    return sid && String(sid) === String(supplierId);
+  }, []);
+
+  const filteredResources = useMemo(() => {
+    if (!selSupplier) return [];
+    return (resources || []).filter(res => supplierMatchesResource(res, selSupplier));
+  }, [resources, selSupplier, supplierMatchesResource]);
+
+  const sortedReserved = useMemo(() => {
+    const sorted = [...reserved];
+    const dir = sortConfig.direction === 'desc' ? -1 : 1;
+    const key = sortConfig.key;
+    sorted.sort((a, b) => {
+      switch (key){
+        case 'tip':
+          return dir * String(a.tip || '').localeCompare(String(b.tip || ''));
+        case 'kolicina':
+          return dir * ((Number(a.kolicina) || 0) - (Number(b.kolicina) || 0));
+        case 'velicina':
+          return dir * String(a.velicina || '').localeCompare(String(b.velicina || ''));
+        case 'dobavljac':
+          return dir * String(a.dobavljacIme || '').localeCompare(String(b.dobavljacIme || ''));
+        case 'naziv':
+        default:
+          return dir * String(a.naziv || '').localeCompare(String(b.naziv || ''));
+      }
+    });
+    return sorted;
+  }, [reserved, sortConfig]);
+
+  const toggleSort = (key) => {
+    if (!SORTABLE_COLUMNS.includes(key)) return;
+    setSortConfig(prev => {
+      if (prev.key === key){
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
   const newLocation = useCallback(() => {
     setShowEditor(true);
     setLock(false);
@@ -225,26 +294,26 @@ export default function Locations({ eventId }){
     setPin({ x: Number.isFinite(lat) ? lat : null, y: Number.isFinite(lng) ? lng : null });
 
     const mapped = Array.isArray(loc?.Resursi)
-    ? loc.Resursi.map(r => {
-        const rid = normalizeId(r) || r?.ResursId || r?.resursId || null;
-        const suppId = r?.DobavljacId ?? r?.dobavljacId ?? null;   // << NOVO
-        return {
-          id: rid,
-          naziv: r?.Naziv || r?.naziv || '',
-          tip: r?.Tip || r?.tip || '',
-          velicina: r?.Velicina || r?.velicina || r?.Dimenzija || r?.dimenzija || r?.Kapacitet || r?.kapacitet || '', // << VELIČINA fallback
-          opis: r?.Opis || r?.opis || '',
-          kolicina: Number(r?.Kolicina ?? r?.kolicina ?? 0),
-          dobavljacIme: r?.DobavljacIme || r?.dobavljacIme || supplierNameById(suppId), // << IME iz suppliers
-          reserved: true,
-        };
-      })
-    : [];
+      ? loc.Resursi.map(r => {
+          const rid = normalizeId(r) || r?.ResursId || r?.resursId || null;
+          const suppId = r?.DobavljacId ?? r?.dobavljacId ?? null;
+          return {
+            id: rid,
+            naziv: r?.Naziv || r?.naziv || '',
+            tip: r?.Tip || r?.tip || '',
+            velicina: r?.Velicina || r?.velicina || r?.Dimenzija || r?.dimenzija || r?.Kapacitet || r?.kapacitet || '',
+            opis: r?.Opis || r?.opis || '',
+            kolicina: Number(r?.Kolicina ?? r?.kolicina ?? 0),
+            dobavljacIme: r?.DobavljacIme || r?.dobavljacIme || supplierNameById(suppId),
+            reserved: true,
+          };
+        })
+      : [];
     setReserved(mapped);
     setSelSupplier(''); setSelResource(''); setQty('');
     setLock(true);
     setShowMap(false);
-  }, []);
+  }, [supplierNameById]);
 
   const deleteLocation = useCallback(async (loc) => {
     const id = normalizeId(loc);
@@ -252,12 +321,16 @@ export default function Locations({ eventId }){
     if (!window.confirm('Obrisati lokaciju?')) return;
     try{
       await locationsApi.remove(id);
-      setLocations(prev => prev.filter(x => normalizeId(x) !== id));
+      setLocations(prev => {
+        const next = prev.filter(x => normalizeId(x) !== id);
+        broadcastLocations(next);
+        return next;
+      });
       toast.success('Lokacija obrisana.');
     }catch{
       toast.error('Brisanje nije uspelo.');
     }
-  }, []);
+  }, [broadcastLocations]);
 
   const handleTipChange = (v) => {
     const vv = String(v || '');
@@ -272,70 +345,74 @@ export default function Locations({ eventId }){
     setShowMap(v => !v);
   };
 
+  useEffect(() => {
+    if (!selSupplier){
+      setSelResource('');
+      setQty('');
+    }
+  }, [selSupplier]);
+
   const addResource = async () => {
-  if (!selSupplier){ toast.error('Izaberi dobavljača.'); return; }
-  if (!selResource){ toast.error('Izaberi resurs.'); return; }
-  const q = Number(qty);
-  if (!Number.isFinite(q) || q <= 0){ toast.error('Unesi količinu.'); return; }
+    if (!selSupplier){ toast.error('Izaberi dobavljača.'); return; }
+    if (!selResource){ toast.error('Izaberi resurs.'); return; }
+    const q = Number(qty);
+    if (!Number.isFinite(q) || q <= 0){ toast.error('Unesi količinu.'); return; }
 
-  const res = resources.find(r => String(normalizeId(r)) === String(selResource));
-  if (!res){ toast.error('Nepoznat resurs.'); return; }
+    const res = (filteredResources.length ? filteredResources : resources).find(r => String(normalizeId(r)) === String(selResource));
+    if (!res){ toast.error('Nepoznat resurs.'); return; }
 
-  const vel = res?.Velicina || res?.velicina || res?.Dimenzija || res?.dimenzija || res?.Kapacitet || res?.kapacitet || ''; // << VELIČINA
-  const suppName = supplierNameById(selSupplier); // << IME DOBAVLJAČA
+    const vel = res?.Velicina || res?.velicina || res?.Dimenzija || res?.dimenzija || res?.Kapacitet || res?.kapacitet || '';
+    const suppName = supplierNameById(selSupplier);
 
-  // lokalni upis
-  setReserved(prev => {
-    const idx = prev.findIndex(x => String(x.id) === String(selResource));
-    if (idx >= 0){
-      const copy = prev.slice();
-      copy[idx] = {
-        ...copy[idx],
-        kolicina: (copy[idx].kolicina || 0) + q,
-        dobavljacIme: copy[idx].dobavljacIme || suppName, // << upiši ime
-        velicina: copy[idx].velicina || vel,               // << upiši veličinu ako fali
-      };
-      return copy;
-    }
-    return [...prev, {
-      id: normalizeId(res),
-      naziv: res?.Naziv || res?.naziv || 'Resurs',
-      tip: res?.Tip || res?.tip || '',
-      velicina: vel,
-      opis: res?.Opis || res?.opis || '',
-      kolicina: q,
-      dobavljacIme: suppName,
-      reserved: false,
-    }];
-  });
-  setQty('');
-
-  // rezervacija odmah ako lokacija postoji
-  if (locId){
-    try{
-      await reserveResource({ LokacijaId: locId, ResursId: selResource, Kolicina: q });
-      setReserved(list => list.map(x => String(x.id) === String(selResource) ? { ...x, reserved:true } : x));
-      toast.success(`Rezervisano: ${(res?.Naziv || 'Resurs')} × ${q}`);
-    }catch{
-      // rollback
-      setReserved(list => {
-        const idx = list.findIndex(x => String(x.id) === String(selResource));
-        if (idx === -1) return list;
-        const copy = list.slice();
-        const it = copy[idx];
-        const newQty = (it.kolicina || 0) - q;
-        if (newQty <= 0) copy.splice(idx, 1);
-        else copy[idx] = { ...it, kolicina: newQty };
+    setReserved(prev => {
+      const idx = prev.findIndex(x => String(x.id) === String(selResource));
+      if (idx >= 0){
+        const copy = prev.slice();
+        copy[idx] = {
+          ...copy[idx],
+          kolicina: (copy[idx].kolicina || 0) + q,
+          dobavljacIme: copy[idx].dobavljacIme || suppName,
+          velicina: copy[idx].velicina || vel,
+        };
         return copy;
-      });
-      toast.error('Rezervacija nije uspela.');
-    }
-  }
-};
+      }
+      return [...prev, {
+        id: normalizeId(res),
+        naziv: res?.Naziv || res?.naziv || 'Resurs',
+        tip: res?.Tip || res?.tip || '',
+        velicina: vel,
+        opis: res?.Opis || res?.opis || '',
+        kolicina: q,
+        dobavljacIme: suppName,
+        reserved: false,
+      }];
+    });
+    setQty('');
 
+    if (locId){
+      try{
+        await reserveResource({ LokacijaId: locId, ResursId: selResource, Kolicina: q });
+        setReserved(list => list.map(x => String(x.id) === String(selResource) ? { ...x, reserved:true } : x));
+        toast.success(`Rezervisano: ${(res?.Naziv || 'Resurs')} × ${q}`);
+      }catch{
+        setReserved(list => {
+          const idx = list.findIndex(x => String(x.id) === String(selResource));
+          if (idx === -1) return list;
+          const copy = list.slice();
+          const it = copy[idx];
+          const newQty = (it.kolicina || 0) - q;
+          if (newQty <= 0) copy.splice(idx, 1);
+          else copy[idx] = { ...it, kolicina: newQty };
+          return copy;
+        });
+        toast.error('Rezervacija nije uspela.');
+      }
+    }
+  };
 
   const removeReservedHandler = async (r) => {
     if (r?.reserved && locId){
+      if (!window.confirm('Otkazati rezervaciju ovog resursa?')) return;
       try{
         await cancelReservation({ LokacijaId: locId, ResursId: r.id });
         toast.success('Rezervacija otkazana.');
@@ -344,6 +421,7 @@ export default function Locations({ eventId }){
         toast.error('Otkazivanje nije uspelo.');
       }
     } else {
+      if (!window.confirm('Ukloniti resurs iz liste?')) return;
       setReserved(prev => prev.filter(x => String(x.id) !== String(r.id)));
     }
   };
@@ -381,6 +459,7 @@ export default function Locations({ eventId }){
         const newId = normalizeId(created);
         const ls = await locationsApi.listByEvent(eventId).catch(() => []);
         setLocations(Array.isArray(ls) ? ls : []);
+        broadcastLocations(Array.isArray(ls) ? ls : []);
         toast.success('Lokacija kreirana.');
         setLocId(newId || null);
         setLock(true);
@@ -388,6 +467,7 @@ export default function Locations({ eventId }){
         await locationsApi.update(locId, base);
         const ls = await locationsApi.listByEvent(eventId).catch(() => []);
         setLocations(Array.isArray(ls) ? ls : []);
+        broadcastLocations(Array.isArray(ls) ? ls : []);
         toast.success('Izmene sačuvane.');
         setLock(true);
       }
@@ -397,6 +477,12 @@ export default function Locations({ eventId }){
       setLoading(false);
     }
   }
+
+  const resourceHeader = (label, key) => (
+    <th onClick={() => toggleSort(key)} className={sortConfig.key === key ? `sorted-${sortConfig.direction}` : ''}>
+      {label}
+    </th>
+  );
 
   return (
     <div className="ar-wrap">
@@ -516,24 +602,23 @@ export default function Locations({ eventId }){
             />
           )}
 
-          {/* Raspored: 70% tabela / 30% forma */}
           <div className="loc-res-wrap">
             <div className="loc-res-table">
               <div className="label">Rezervisani resursi</div>
               <table className="loc-table">
                 <thead>
                   <tr>
-                    <th>Naziv</th>
-                    <th>Tip</th>
-                    <th className="num">Količina</th>
-                    <th>Veličina</th>
+                    {resourceHeader('Naziv', 'naziv')}
+                    {resourceHeader('Tip', 'tip')}
+                    {resourceHeader('Količina', 'kolicina')}
+                    {resourceHeader('Veličina', 'velicina')}
                     <th>Opis</th>
-                    <th>Dobavljač</th>
+                    {resourceHeader('Dobavljač', 'dobavljac')}
                     <th>Akcije</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reserved.map((r, i) => (
+                  {sortedReserved.map((r, i) => (
                     <tr key={r.id || i}>
                       <td>{r.naziv}</td>
                       <td>{r.tip}</td>
@@ -546,7 +631,7 @@ export default function Locations({ eventId }){
                       </td>
                     </tr>
                   ))}
-                  {(!reserved || reserved.length===0) && (
+                  {sortedReserved.length === 0 && (
                     <tr><td colSpan={7} className="muted center">Nema dodatih resursa</td></tr>
                   )}
                 </tbody>
@@ -565,18 +650,21 @@ export default function Locations({ eventId }){
               </select>
 
               <div className="label" style={{ marginTop: 8 }}>Resurs</div>
-              <select className="select" value={selResource} onChange={e=>setSelResource(e.target.value)} disabled={lock}>
+              <select className="select" value={selResource} onChange={e=>setSelResource(e.target.value)} disabled={lock || !selSupplier}>
                 <option value="">-- izaberi --</option>
-                {resources.map(r => {
+                {(selSupplier ? filteredResources : resources).map(r => {
                   const id = String(normalizeId(r));
                   const name = r?.Naziv || r?.naziv || 'Resurs';
                   const tip = r?.Tip || r?.tip || '';
                   return <option key={id} value={id}>{name} · {tip}</option>;
                 })}
               </select>
+              {selSupplier && filteredResources.length === 0 && (
+                <div className="ar-note">Ovaj dobavljač nema dostupne resurse.</div>
+              )}
 
               <div className="label" style={{ marginTop: 8 }}>Količina</div>
-              <input className="input" type="number" value={qty} onChange={e=>setQty(e.target.value)} disabled={lock} />
+              <input className="input" type="number" value={qty} onChange={e=>setQty(e.target.value)} disabled={lock || !selResource} />
 
               <div style={{ marginTop: 10 }}>
                 <button className="ar-btn" onClick={addResource} disabled={lock}>Dodaj resurs</button>

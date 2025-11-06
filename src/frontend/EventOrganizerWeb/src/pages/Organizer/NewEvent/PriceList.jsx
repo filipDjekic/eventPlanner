@@ -15,6 +15,8 @@ const EMPTY_ITEM = {
   UrlSlika: '',
 };
 
+const PRICEABLE_TYPES = new Set(['BAR','HRANA','VIP','INFO','BINA','ULAZ']);
+
 function makeLocalItem(raw){
   const localId = raw?.localId || `local-${Math.random().toString(36).slice(2)}`;
   const id = raw?.Id || raw?._id || raw?.id || null;
@@ -59,6 +61,16 @@ export default function PriceList({ eventId }){
 
   const isEditable = mode === 'creating' || mode === 'editing';
   const hasEvent = Boolean(eventId);
+
+  const filterPriceableLocations = useCallback((list) => {
+    const arr = Array.isArray(list) ? list : [];
+    if (arr.length === 0) return [];
+    const filtered = arr.filter((loc) => {
+      const rawType = String(loc?.TipLokacije || loc?.tipLokacije || '').toUpperCase();
+      return PRICEABLE_TYPES.has(rawType);
+    });
+    return filtered.length > 0 ? filtered : arr;
+  }, []);
 
   const resetForm = useCallback(() => {
     setName('');
@@ -110,16 +122,17 @@ export default function PriceList({ eventId }){
     if (shouldStop()) return;
     setLoading(true);
     try {
-      const [locs, lists] = await Promise.all([
+      const [locsRaw, lists] = await Promise.all([
         locationsApi.listByEvent(eventId).catch(() => []),
         priceListApi.listAll().catch(() => []),
       ]);
       if (shouldStop()) return;
 
-      setLocations(Array.isArray(locs) ? locs : []);
+      const locs = filterPriceableLocations(locsRaw);
+      setLocations(locs);
 
       const locationIds = new Set(
-        (Array.isArray(locs) ? locs : [])
+        (locs || [])
           .map((loc) => String(locationsApi.normalizeId(loc) || ''))
           .filter(Boolean)
       );
@@ -189,6 +202,33 @@ export default function PriceList({ eventId }){
     setMode('idle');
     resetForm();
   }, [eventId, resetForm]);
+
+  useEffect(() => {
+    function onLocationsUpdated(e){
+      if (!eventId) return;
+      const detailId = e?.detail?.eventId;
+      if (detailId && String(detailId) !== String(eventId)) return;
+      const list = e?.detail?.locations;
+      if (Array.isArray(list)){
+        setLocations(filterPriceableLocations(list));
+        return;
+      }
+      locationsApi.listByEvent(eventId).then((locs) => setLocations(filterPriceableLocations(locs))).catch(() => {});
+    }
+    window.addEventListener('ne:locations:updated', onLocationsUpdated);
+    return () => window.removeEventListener('ne:locations:updated', onLocationsUpdated);
+  }, [eventId, filterPriceableLocations]);
+
+  useEffect(() => {
+    if (!locationId){
+      if (defaultLocationId) setLocationId(defaultLocationId);
+      return;
+    }
+    const exists = locations.some((loc) => String(locationsApi.normalizeId(loc) || '') === String(locationId));
+    if (!exists){
+      setLocationId(defaultLocationId || '');
+    }
+  }, [locations, locationId, defaultLocationId]);
 
   const startNew = () => {
     if (!hasEvent){
@@ -302,6 +342,7 @@ export default function PriceList({ eventId }){
   };
 
   const handleRemoveItem = (localId) => {
+    if (!window.confirm('Ukloniti stavku iz cenovnika?')) return;
     setItems((prev) => {
       const target = prev.find((itm) => itm.localId === localId);
       if (!target) return prev;
@@ -410,6 +451,7 @@ export default function PriceList({ eventId }){
 
   const handleDelete = async () => {
     if (!currentListId) return;
+    if (!window.confirm('Obrisati ceo cenovnik?')) return;
     setSaving(true);
     try {
       for (const item of items){
