@@ -1,6 +1,8 @@
 // src/pages/Organizer/NewEvent/Days.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import toast from 'react-hot-toast';
+
+import Section from './Section';
 import '../../../styles/NewEvent/days.css';
 import * as neweventApi from '../../../services/newEventApi';
 import * as daysApi from '../../../services/daysApi';
@@ -334,58 +336,65 @@ export default function Days({ eventId }){
     }
   }
 
-  return (
-    <div className="dy-wrap">
-      <div className="dy-head">
-        <h3>Dani događaja</h3>
-      </div>
+  const lockedCount = days.filter((d) => d._locked).length;
+  const headerBadges = [
+    loading ? { label: 'Učitavanje...', tone: 'info' } : null,
+    !eventId ? { label: 'Draft nije kreiran', tone: 'warning' } : null,
+    range.count ? { label: `Planiranih dana: ${range.count}` } : null,
+    days.length ? { label: `Zaključano: ${lockedCount}/${days.length}` } : null,
+  ].filter(Boolean);
 
+  return (
+    <Section
+      title="Dani događaja"
+      subtitle="Prilagodi raspored i nazive pojedinačnih dana u skladu sa planom događaja."
+      badges={headerBadges}
+    >
       {!eventId && (
-        <div className="dy-note">Kreiraj draft događaja u "Basic info" da bi uređivao dane.</div>
+        <div className="dy-note">Kreiraj draft događaja u "Osnovnim informacijama" da bi uređivao dane.</div>
       )}
 
       {eventId && range.count === 0 && (
-        <div className="dy-note">Postavi datume u "Basic info" pa se vrati ovde da generišeš dane.</div>
+        <div className="dy-note">Postavi datume u "Osnovnim informacijama" kako bi se automatski generisali dani.</div>
       )}
 
       {eventId && range.count > 0 && (
-      <div className="dy-main">
-        <div className="dy-list">
-          {days.map((d, idx) => (
-            <div key={d.localId || idx} className={`dy-card ${d._locked ? 'is-locked' : ''}`}>
-              <div className="dy-card-head">
-                <div className="dy-title">Dan {d.RedniBroj}</div>
-                <div className="dy-badge">{d.DatumOdrzavanja}</div>
-                <div className="dy-spacer" />
-                <div className="dy-actions">
-                  <button className="dy-btn" disabled={!eventId || loading} onClick={()=>onToggle(idx)}>
-                    {d._locked ? 'Izmeni' : (d.Id ? 'Sačuvaj izmene' : 'Sačuvaj')}
-                  </button>
+        <div className="dy-main">
+          <div className="dy-list">
+            {days.map((d, idx) => (
+              <div key={d.localId || idx} className={`dy-card ${d._locked ? 'is-locked' : ''}`}>
+                <div className="dy-card-head">
+                  <div className="dy-title">Dan {d.RedniBroj}</div>
+                  <div className="dy-badge">{d.DatumOdrzavanja}</div>
+                  <div className="dy-spacer" />
+                  <div className="dy-actions">
+                    <button className="dy-btn" disabled={!eventId || loading} onClick={()=>onToggle(idx)}>
+                      {d._locked ? 'Izmeni' : (d.Id ? 'Sačuvaj izmene' : 'Sačuvaj')}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="dy-sep" />
+
+                <div className="dy-grid">
+                  <label className="block">
+                    <div className="label mb-1">Naziv</div>
+                    <input className="input" value={d.Naziv} onChange={e=>onChange(idx,'Naziv', e.target.value)} disabled={loading || d._locked}/>
+                  </label>
+                  <label className="block">
+                    <div className="label mb-1">Opis</div>
+                    <input className="input" value={d.Opis} onChange={e=>onChange(idx,'Opis', e.target.value)} disabled={loading || d._locked}/>
+                  </label>
+                  <label className="block">
+                    <div className="label mb-1">Datum održavanja</div>
+                    <input className="input" type="date" value={d.DatumOdrzavanja} readOnly disabled/>
+                  </label>
                 </div>
               </div>
-
-              <div className="dy-sep" />
-
-              <div className="dy-grid">
-                <label className="block">
-                  <div className="label mb-1">Naziv</div>
-                  <input className="input" value={d.Naziv} onChange={e=>onChange(idx,'Naziv', e.target.value)} disabled={loading || d._locked}/>
-                </label>
-                <label className="block">
-                  <div className="label mb-1">Opis</div>
-                  <input className="input" value={d.Opis} onChange={e=>onChange(idx,'Opis', e.target.value)} disabled={loading || d._locked}/>
-                </label>
-                <label className="block">
-                  <div className="label mb-1">Datum održavanja</div>
-                  <input className="input" type="date" value={d.DatumOdrzavanja} readOnly disabled/>
-                </label>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-    )}
-
-    </div>
+      )}
+    </Section>
   );
 }

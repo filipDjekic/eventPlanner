@@ -1,24 +1,3 @@
-/* src/styles/NewEvent/areas.css */
-.ar-wrap {
-  margin-top: 32px;
-}
-
-.ar-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.ar-title {
-  font-weight: 700;
-  font-size: 1.2rem;
-  color: var(--ne-text-strong);
-}
-
-.ar-spacer {
-  flex: 1;
-}
-
 .ar-btn {
   padding: 10px 16px;
   border: 1px solid var(--ne-border-strong);

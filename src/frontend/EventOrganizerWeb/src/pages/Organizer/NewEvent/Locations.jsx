@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 
+import Section from './Section';
 import '../../../styles/NewEvent/areas.css';
 import '../../../styles/NewEvent/locations.css';
 
@@ -484,14 +485,25 @@ export default function Locations({ eventId }){
     </th>
   );
 
-  return (
-    <div className="ar-wrap">
-      <div className="ar-head">
-        <div className="ar-title">Lokacije</div>
-        <div className="ar-spacer" />
-        <button className="ar-btn" disabled={!eventId || loading} onClick={newLocation}>+ Nova lokacija</button>
-      </div>
+  const headerBadges = [
+    loading ? { label: 'Učitavanje...', tone: 'info' } : null,
+    !eventId ? { label: 'Draft nije kreiran', tone: 'warning' } : null,
+    { label: `Lokacije: ${locations.length || 0}` },
+  ].filter(Boolean);
 
+  const addLocationButton = (
+    <button className="ar-btn" disabled={!eventId || loading} onClick={newLocation}>
+      Nova lokacija
+    </button>
+  );
+
+  return (
+    <Section
+      title="Lokacije"
+      subtitle="Poveži resurse sa konkretnim tačkama na mapi i dodeli ih odgovarajućim područjima."
+      badges={headerBadges}
+      actions={addLocationButton}
+    >
       <div className="ar-list" style={{ marginTop: 16 }}>
         {(locations || []).map((loc) => {
           const id = normalizeId(loc);
@@ -687,6 +699,6 @@ export default function Locations({ eventId }){
           )}
         </div>
       )}
-    </div>
+    </Section>
   );
 }

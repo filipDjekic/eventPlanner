@@ -1,17 +1,5 @@
 /* src/styles/NewEvent/days.css */
 
-/* Wrapper i header (u skladu sa tickets.css/basicinfo.css) */
-.dy-wrap {
-  margin-top: 32px;
-}
-
-.dy-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
 .dy-title {
   font-size: 1.3rem;
   font-weight: 600;
@@ -52,11 +40,9 @@
 
 /* Lista i kartice */
 .dy-main {
-  border: 1px solid var(--ne-border);
-  border-radius: 20px;
-  padding: 18px;
-  background: var(--ne-surface);
-  box-shadow: var(--ne-shadow-sm);
+  border-radius: 18px;
+  padding: 4px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), transparent);
 }
 
 .dy-list {

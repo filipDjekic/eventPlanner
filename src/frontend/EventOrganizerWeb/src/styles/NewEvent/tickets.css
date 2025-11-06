@@ -1,24 +1,6 @@
 /* src/styles/NewEvent/tickets.css */
 
-/* Wrapper i header */
-.tk-wrap {
-  margin-top: 32px;
-}
-
-.tk-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.tk-head h2 {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: var(--ne-text-strong);
-}
-
-.btn.tk-add {
+.tk-add {
   background: var(--ne-btn-primary);
   border: 1px solid transparent;
   border-radius: 12px;
@@ -27,12 +9,12 @@
   font-weight: 600;
 }
 
-.btn.tk-add:not(:disabled):hover {
+.tk-add:not(:disabled):hover {
   background: var(--ne-btn-primary-hover);
   transform: translateY(-1px);
 }
 
-.btn.tk-add:disabled {
+.tk-add:disabled {
   opacity: 0.55;
   cursor: not-allowed;
   box-shadow: none;

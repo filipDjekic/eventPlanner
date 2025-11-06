@@ -1,7 +1,9 @@
 // src/pages/Organizer/NewEvent/Tickets.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import '../../../styles/NewEvent/tickets.css';
 import toast from 'react-hot-toast';
+
+import Section from './Section';
+import '../../../styles/NewEvent/tickets.css';
 import * as ticketsApi from '../../../services/ticketsApi';
 import * as neweventApi from '../../../services/newEventApi';
 
@@ -326,22 +328,36 @@ export default function Tickets({ eventId, initialCapacity, initialInfinite }){
   const disabledGlobal = !eventId || loading;
   const disableAdd = disabledGlobal || saving || infinite;
 
-  return (
-    <div className="form-card tk-wrap">
-      <div className="tk-head">
-        <div className="label">Karte</div>
-        <div className="grow" />
-        <button className="btn tk-add" onClick={addTicket} disabled={disableAdd}>
-          Dodaj kartu
-        </button>
-      </div>
+  const headerBadges = [
+    loading ? { label: 'Učitavanje...', tone: 'info' } : null,
+    saving ? { label: 'Čuvanje...', tone: 'info' } : null,
+    infinite
+      ? { label: 'Beskonačan kapacitet', tone: 'warning' }
+      : (Number.isFinite(Number(capacity))
+        ? { label: `Raspoređeno ${manualTotal}/${capacity}` }
+        : null),
+    { label: `Tipova ulaznica: ${tickets.length || 0}` },
+  ].filter(Boolean);
 
+  const addButton = (
+    <button className="btn btn-primary tk-add" onClick={addTicket} disabled={disableAdd}>
+      Dodaj kartu
+    </button>
+  );
+
+  return (
+    <Section
+      title="Karte"
+      subtitle="Definiši tipove ulaznica, cene i količine koje posetioci mogu da rezervišu."
+      badges={headerBadges}
+      actions={addButton}
+    >
       {!eventId && (
-        <div className="tk-note">Kreiraj draft događaja u "Basic info" da bi dodavao karte.</div>
+        <div className="tk-note">Kreiraj draft događaja u "Osnovnim informacijama" pre dodavanja karata.</div>
       )}
 
       {infinite && (
-        <div className="tk-note">Kapacitet je beskonačan – automatski je dodata besplatna karta. Možeš promeniti samo boju.</div>
+        <div className="tk-note">Kapacitet je beskonačan – automatski je dodata besplatna karta. Možeš da promeniš samo boju.</div>
       )}
 
       {!infinite && Number.isFinite(Number(capacity)) && (
@@ -406,6 +422,6 @@ export default function Tickets({ eventId, initialCapacity, initialInfinite }){
           );
         })}
       </div>
-    </div>
+    </Section>
   );
 }
