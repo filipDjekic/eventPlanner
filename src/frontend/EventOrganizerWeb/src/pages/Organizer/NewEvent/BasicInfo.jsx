@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import '../../../styles/NewEvent/basicinfo.css'; // FIX: one more ../
 import toast from 'react-hot-toast';
 import { getAuth } from '../../../utils/auth';
-import * as basicinfoApi from '../../../services/basicinfoapi';
+import * as basicinfoApi from '../../../services/basicInfoApi';
 import * as neweventApi from '../../../services/newEventApi';
 
 const KATEGORIJE = ['utakmica', 'protest', 'vašar', 'žurka', 'festival', 'ostalo'];

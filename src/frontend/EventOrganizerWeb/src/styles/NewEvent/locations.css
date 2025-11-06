@@ -1,71 +1,158 @@
-/* src/styles/NewEvent/locations.css */
-
-/* Uvozimo izgled iz areas.css (:contentReference[oaicite:6]{index=6}) – ovde dodajemo samo specifičnosti za pin i resurse */
-.loc-pin { stroke:#111; fill:#fff; opacity:.9; }
-.loc-pin-label { font-size:10px; fill:#eee; text-shadow: 0 1px 1px #000; }
-
 .loc-res-wrap {
   display: grid;
   grid-template-columns: 7fr 3fr;
-  gap: 12px;
+  gap: 18px;
   margin-top: 16px;
 }
-@media (max-width: 1100px){
-  .loc-res-wrap { grid-template-columns: 1fr; }
+
+@media (max-width: 1100px) {
+  .loc-res-wrap {
+    grid-template-columns: 1fr;
+  }
 }
 
-.loc-res-table {
-  border:1px solid #333; border-radius:12px; background:#0f0f0f; padding:12px;
-}
-
-.loc-table { width:100%; border-collapse: collapse; }
-.loc-table th, .loc-table td { border-bottom:1px solid #222; padding:8px; }
-.loc-table th { text-align:left; color:#bbb; font-weight:600; }
-.loc-table td { color:#ddd; }
-
+.loc-res-table,
 .loc-res-form {
-  border:1px solid #333; border-radius:12px; background:#0f0f0f; padding:12px;
+  border: 1px solid var(--ne-border);
+  border-radius: var(--ne-radius);
+  background: var(--ne-surface);
+  padding: 20px;
+  box-shadow: var(--ne-shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-/* Pin (divIcon) */
-.pin-divicon { pointer-events: none; } /* klik ide na mapu, ne na HTML ikonu */
-.pin-wrap { position: relative; transform: translate(-50%, -100%); }
+.loc-table th,
+.loc-table td {
+  border-bottom: 1px solid var(--ne-border);
+}
+
+.loc-table th {
+  font-weight: 700;
+  color: var(--ne-text);
+}
+
+.loc-table td {
+  color: var(--ne-muted);
+}
+
+.loc-table th.num,
+.loc-table td.num {
+  text-align: right;
+  width: 110px;
+}
+
+.loc-table .center {
+  text-align: center;
+}
+
+.loc-table .muted {
+  color: var(--ne-muted-light);
+}
+
+.loc-note {
+  margin-top: -6px;
+}
+
+.loc-res-table .label {
+  margin-bottom: 6px;
+}
+
+.pin-divicon {
+  pointer-events: none;
+}
+
+.pin-wrap {
+  position: relative;
+  transform: translate(-50%, -100%);
+}
+
 .pin-label {
   position: relative;
-  left: 50%; transform: translateX(-50%);
-  padding: 2px 6px; border-radius: 4px;
-  color: #111; font-size: 12px; font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0,0,0,.4);
-  white-space: nowrap;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--ne-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.25);
+  background: var(--ne-surface);
 }
+
 .pin-tail {
   position: relative;
-  left: 50%; transform: translateX(-50%);
-  width: 0; height: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 8px solid #8888ff; /* boja se prepisuje inline-om */
+  border-top: 8px solid var(--ne-primary);
 }
-.map-canvas { height: 420px; }
 
-/* ----- Tabela finese ----- */
-.loc-table th, .loc-table td { vertical-align: middle; }
-.loc-table th.num, .loc-table td.num { text-align: right; width: 100px; }
-.loc-table .center { text-align: center; }
-.loc-table .muted { color: #999; }
-.loc-res-table .label { margin-bottom: 8px; display: block; }
+.map-canvas {
+  height: 420px;
+  border-radius: var(--ne-radius);
+  border: 1px solid var(--ne-border);
+  overflow: hidden;
+  box-shadow: var(--ne-shadow-soft);
+}
 
-/* ----- Modal za opis ----- */
+.loc-pin {
+  stroke: rgba(15, 23, 42, 0.55);
+  stroke-width: 2px;
+  fill: var(--ne-surface);
+}
+
+.loc-pin-label {
+  font-size: 11px;
+  fill: var(--ne-secondary);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
 .modal-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,.55);
-  display: flex; align-items: center; justify-content: center; z-index: 50;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
 }
+
 .modal {
-  background: #0f0f0f; border: 1px solid #333; border-radius: 12px; width: min(640px, 92vw);
-  box-shadow: 0 10px 30px rgba(0,0,0,.45); padding: 12px;
+  background: var(--ne-surface);
+  border: 1px solid var(--ne-border);
+  border-radius: var(--ne-radius);
+  width: min(640px, 92vw);
+  box-shadow: 0 20px 46px rgba(15, 23, 42, 0.25);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
+
 .modal-head {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.modal-title { font-weight: 700; }
-.modal-body { color: #ddd; line-height: 1.5; white-space: pre-wrap; }
+
+.modal-title {
+  font-weight: 700;
+  color: var(--ne-text);
+}
+
+.modal-body {
+  color: var(--ne-muted);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

@@ -1,4 +1,4 @@
-.pl-section {
+.act-wrap {
   margin-top: 32px;
   border: 1px solid var(--ne-border);
   border-radius: var(--ne-radius);
@@ -10,82 +10,112 @@
   gap: 20px;
 }
 
-.pl-header {
+.act-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
-  flex-wrap: wrap;
 }
 
-.pl-header h2 {
+.act-head h2 {
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--ne-text);
 }
 
-.pl-header .pl-subtitle {
-  margin-left: auto;
-  font-size: 0.95rem;
-  color: var(--ne-muted);
+.act-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(360px, 1fr);
+  gap: 24px;
 }
 
-.pl-meta {
-  display: flex;
-  gap: 16px;
-  align-items: flex-end;
-  flex-wrap: wrap;
+@media (max-width: 900px) {
+  .act-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
-.pl-meta .pl-field {
+.act-form,
+.act-schedule {
   display: flex;
   flex-direction: column;
-  min-width: 220px;
+  gap: 14px;
+  background: var(--ne-surface-muted);
+  border: 1px solid var(--ne-border);
+  border-radius: var(--ne-radius);
+  padding: 18px;
+}
+
+.act-form h3,
+.act-schedule h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ne-text);
+}
+
+.act-field {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
 
-.pl-meta label {
-  font-size: 0.9rem;
+.act-field span {
   font-weight: 600;
   color: var(--ne-muted);
 }
 
-.pl-input,
-.pl-select,
-.pl-textarea {
+.act-input,
+.act-textarea,
+.act-select {
   padding: 10px 12px;
   border-radius: var(--ne-radius-sm);
   border: 1px solid var(--ne-border);
-  background: var(--ne-surface-muted);
+  background: var(--ne-surface);
   color: var(--ne-text);
   font-size: 0.95rem;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
-.pl-input:focus,
-.pl-select:focus,
-.pl-textarea:focus {
+.act-input:focus,
+.act-textarea:focus,
+.act-select:focus {
   outline: none;
   border-color: var(--ne-primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-  background: var(--ne-surface);
 }
 
-.pl-input[disabled],
-.pl-select[disabled],
-.pl-textarea[disabled] {
+.act-input[disabled],
+.act-textarea[disabled],
+.act-select[disabled] {
   background: #edf2f7;
   color: var(--ne-muted-light);
   cursor: not-allowed;
 }
 
-.pl-controls {
+.act-textarea {
+  resize: vertical;
+}
+
+.act-two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .act-two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.act-actions {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.pl-btn {
-  padding: 10px 18px;
+.act-btn {
+  padding: 9px 16px;
   border-radius: var(--ne-radius-sm);
   border: none;
   background: var(--ne-primary);
@@ -95,56 +125,48 @@
   transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
-.pl-btn:hover:not([disabled]) {
+.act-btn:hover:not([disabled]) {
   transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
-  background: var(--ne-primary-strong);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
 }
 
-.pl-btn:disabled {
+.act-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   box-shadow: none;
 }
 
-.pl-btn.pl-secondary {
+.act-btn.act-secondary {
   background: var(--ne-surface-muted);
   border: 1px solid var(--ne-border);
   color: var(--ne-text);
 }
 
-.pl-btn.pl-danger {
+.act-btn.act-danger {
   background: var(--ne-danger);
 }
 
-.pl-content {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.pl-table-wrap {
-  flex: 3;
-  min-width: 320px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.pl-form-wrap {
-  flex: 2;
-  min-width: 260px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.pl-table tbody tr td:last-child {
+.act-table tbody tr td:last-child {
   white-space: nowrap;
 }
 
-.pl-empty {
-  padding: 16px;
+.act-cell-main {
+  font-weight: 600;
+  color: var(--ne-text);
+}
+
+.act-cell-sub {
+  font-size: 0.8rem;
+  color: var(--ne-muted-light);
+}
+
+.act-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.act-empty {
   text-align: center;
+  padding: 16px;
   color: var(--ne-muted);
 }
