@@ -4,6 +4,7 @@ import Login from '../pages/Auth/Login';
 import Register from '../pages/Auth/Register';
 import Events from '../pages/Organizer/Events';
 import NewEvent from '../pages/Organizer/NewEvent/NewEvent';
+import EventDetails from '../pages/Organizer/EventDetails';
 import Resources from '../pages/Supplier/Resources';
 import NewResource from '../pages/Supplier/NewResource';
 import EditResource from '../pages/Supplier/EditResource';
@@ -20,6 +21,7 @@ export default function AppRoutes(){
 
       <Route path="/events" element={<ProtectedRoute><Events/></ProtectedRoute>} />
       <Route path="/events/new" element={<ProtectedRoute><NewEvent/></ProtectedRoute>} />
+      <Route path="/events/:id" element={<ProtectedRoute><EventDetails/></ProtectedRoute>} />
 
       <Route path="/resources" element={<ProtectedRoute><Resources/></ProtectedRoute>} />
       <Route path="/resources/new" element={<ProtectedRoute><NewResource/></ProtectedRoute>} />
