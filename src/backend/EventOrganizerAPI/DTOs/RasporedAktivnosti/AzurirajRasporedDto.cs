@@ -7,5 +7,6 @@ namespace EventOrganizerAPI.DTOs.RasporedAktivnosti
         public string? Opis { get; set; }
         public string? Lokacija { get; set; }
         public string? Dan { get; set; }
+        public string? DogadjajId { get; set; }
     }
 }

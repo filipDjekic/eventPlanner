@@ -24,6 +24,7 @@ namespace EventOrganizerAPI.Services
                 Opis = dto.Opis,
                 Lokacija = dto.Lokacija,
                 Dan = dto.Dan,
+                DogadjajId = dto.DogadjajId,
                 Aktivnosti = new List<string>()
             };
 
@@ -39,18 +40,24 @@ namespace EventOrganizerAPI.Services
 
         public async Task Azuriraj(AzurirajRasporedDto dto)
         {
-            var update = Builders<Raspored>.Update.Combine();
+            var updateBuilder = Builders<Raspored>.Update;
+            var updates = new List<UpdateDefinition<Raspored>>();
 
-            if (dto.Naziv != null)
-                update = update.Set(x => x.Naziv, dto.Naziv);
-            if (dto.Opis != null)
-                update = update.Set(x => x.Opis, dto.Opis);
-            if (dto.Lokacija != null)
-                update = update.Set(x => x.Lokacija, dto.Lokacija);
-            if (dto.Dan != null)
-                update = update.Set(x => x.Dan, dto.Dan);
+            if (!string.IsNullOrEmpty(dto.Naziv))
+                updates.Add(updateBuilder.Set(x => x.Naziv, dto.Naziv));
+            if (!string.IsNullOrEmpty(dto.Opis))
+                updates.Add(updateBuilder.Set(x => x.Opis, dto.Opis));
+            if (!string.IsNullOrEmpty(dto.Lokacija))
+                updates.Add(updateBuilder.Set(x => x.Lokacija, dto.Lokacija));
+            if (!string.IsNullOrEmpty(dto.Dan))
+                updates.Add(updateBuilder.Set(x => x.Dan, dto.Dan));
+            if (!string.IsNullOrEmpty(dto.DogadjajId))
+                updates.Add(updateBuilder.Set(x => x.DogadjajId, dto.DogadjajId));
 
-            await _rasporedi.UpdateOneAsync(x => x.Id == dto.Id, update);
+            if (updates.Count == 0) return;
+
+            var combined = updateBuilder.Combine(updates);
+            await _rasporedi.UpdateOneAsync(x => x.Id == dto.Id, combined);
         }
 
         public async Task Obrisi(string id) =>

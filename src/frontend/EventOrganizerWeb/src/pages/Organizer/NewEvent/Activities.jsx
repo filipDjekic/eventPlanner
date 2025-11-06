@@ -8,6 +8,7 @@ import '../../../styles/NewEvent/activities.css';
 import * as daysApi from '../../../services/daysApi';
 import * as locationsApi from '../../../services/locationsApi';
 import * as activitiesApi from '../../../services/activitiesApi';
+import * as neweventApi from '../../../services/newEventApi';
 
 const TIPOVI_AKTIVNOSTI = ['Koncert', 'Predavanje', 'Igrica', 'Izlozba', 'Radionica', 'Druzenje', 'Ostalo'];
 
@@ -169,6 +170,10 @@ export default function Activities({ eventId }){
         return sa - sb;
       });
       setActivities(normalized);
+      const ids = normalized.map((a) => a.Id).filter(Boolean);
+      try {
+        await neweventApi.updateActivityIds(eventId, ids);
+      } catch {}
     }catch(err){
       console.warn('Greška pri učitavanju aktivnosti:', err);
       toast.error('Ne mogu da osvežim aktivnosti.');

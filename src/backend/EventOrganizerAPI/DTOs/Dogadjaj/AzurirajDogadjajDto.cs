@@ -19,6 +19,8 @@ namespace EventOrganizerAPI.DTOs.Dogadjaj
         public int? Kapacitet { get; set; }
         public List<string>? Karte { get; set; }
         public List<string>? Dani {  get; set; }
+        public List<string>? Cenovnici { get; set; }
+        public List<string>? Aktivnosti { get; set; }
     }
 
 }

@@ -372,45 +372,65 @@ export default function Tickets({ eventId, initialCapacity, initialInfinite }){
           if (infinite && !t.__auto) disableColor = true;
           if (!infinite && t.locked) disableColor = true;
           if (t.__auto && infinite) disableColor = false;
+          const priceLabel = `${Number(t.Cena || 0).toLocaleString('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RSD`;
+          const qtyLabel = t.__auto ? '∞' : Number(t.BrojKarata || 0).toLocaleString('sr-RS');
           return (
             <div key={t.localId} className={`tk-card ${t.locked ? 'tk-locked' : ''}`}>
-              <div className="tk-grid">
-                <label className="block">
-                  <div className="label mb-1">Naziv</div>
-                  <input className="input" value={t.Naziv} onChange={e=>onChange(idx,'Naziv',e.target.value)} disabled={disableFields} />
-                </label>
-
-                <label className="block">
-                  <div className="label mb-1">Tip</div>
-                  <select className="input" value={t.Tip} onChange={e=>onChange(idx,'Tip',e.target.value)} disabled={disableFields}>
-                    {TIPOVI.map(op => <option key={op} value={op}>{op}</option>)}
-                  </select>
-                </label>
-
-                <label className="block">
-                  <div className="label mb-1">Cena</div>
-                  <input className="input" type="number" min="0" value={t.Cena} onChange={e=>onChange(idx,'Cena',e.target.value)} disabled={disableFields} />
-                </label>
-
-                <label className="block">
-                  <div className="label mb-1">Broj karata</div>
-                  <input className="input" type="number" min="0" value={t.BrojKarata} onChange={e=>onChange(idx,'BrojKarata',e.target.value)} disabled={disableFields || t.__auto} />
-                </label>
-
-                <label className="block tk-color">
-                  <div className="label mb-1">Boja</div>
-                  <div className="tk-color-row">
-                    <input
-                      className="input tk-color-input"
-                      type="color"
-                      value={t.Boja || '#ffffff'}
-                      onChange={e=>onChange(idx,'Boja',e.target.value)}
-                      disabled={disableColor}
-                    />
-                    <span className="tk-swatch" style={{ backgroundColor: t.Boja || '#ffffff' }} />
+              {t.locked ? (
+                <div className="tk-summary">
+                  <div className="tk-summary-row">
+                    <div>
+                      <div className="tk-summary-title">{t.Naziv || 'Ulaznica'}</div>
+                      <div className="tk-summary-type">{t.Tip}</div>
+                    </div>
+                    <div className="tk-summary-color">
+                      <span className="tk-swatch" style={{ backgroundColor: t.Boja || '#ffffff' }} />
+                    </div>
                   </div>
-                </label>
-              </div>
+                  <div className="tk-summary-meta">
+                    <span>{priceLabel}</span>
+                    <span>Količina: {qtyLabel}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="tk-grid">
+                  <label className="block">
+                    <div className="label mb-1">Naziv</div>
+                    <input className="input" value={t.Naziv} onChange={e=>onChange(idx,'Naziv',e.target.value)} disabled={disableFields} />
+                  </label>
+
+                  <label className="block">
+                    <div className="label mb-1">Tip</div>
+                    <select className="input" value={t.Tip} onChange={e=>onChange(idx,'Tip',e.target.value)} disabled={disableFields}>
+                      {TIPOVI.map(op => <option key={op} value={op}>{op}</option>)}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <div className="label mb-1">Cena</div>
+                    <input className="input" type="number" min="0" value={t.Cena} onChange={e=>onChange(idx,'Cena',e.target.value)} disabled={disableFields} />
+                  </label>
+
+                  <label className="block">
+                    <div className="label mb-1">Broj karata</div>
+                    <input className="input" type="number" min="0" value={t.BrojKarata} onChange={e=>onChange(idx,'BrojKarata',e.target.value)} disabled={disableFields || t.__auto} />
+                  </label>
+
+                  <label className="block tk-color">
+                    <div className="label mb-1">Boja</div>
+                    <div className="tk-color-row">
+                      <input
+                        className="input tk-color-input"
+                        type="color"
+                        value={t.Boja || '#ffffff'}
+                        onChange={e=>onChange(idx,'Boja',e.target.value)}
+                        disabled={disableColor}
+                      />
+                      <span className="tk-swatch" style={{ backgroundColor: t.Boja || '#ffffff' }} />
+                    </div>
+                  </label>
+                </div>
+              )}
 
               <div className="tk-actions">
                 <button className="btn" onClick={()=> t.locked ? toggleEdit(idx) : saveTicket(idx)} disabled={disableActions}>

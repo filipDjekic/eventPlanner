@@ -1,5 +1,5 @@
 // src/pages/Organizer/NewEvent/Areas.jsx
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import Section from './Section';
@@ -63,9 +63,8 @@ export default function Areas({ eventId }){
 
         if (mounted){
           setDays(sortDays(dayObjs));
-          setAreas(mapped);
         }
-        
+
         // 2) Postojeća područja
         const existing = await areasApi.getForEvent(eventId);
         const mapped = (existing||[]).map((a, idx) => ({
@@ -325,6 +324,11 @@ function AreaCard({ idx, area, days, disabledAll, onField, onToggleLock, onDelet
     return allAreas.filter(x => x.Id && x.DanId && x.DanId === area.DanId && x.Id !== area.Id);
   }, [allAreas, area.DanId, area.Id]);
 
+  const dayLabel = useMemo(() => {
+    const match = days.find((d) => String(d.Id) === String(area.DanId));
+    return match?.Naziv || match?.naziv || (match?.RedniBroj ? `Dan ${match.RedniBroj}` : 'Dan nije dodeljen');
+  }, [days, area.DanId]);
+
   const canSave = useMemo(()=>{
     return !disabledAll && !area._locked
       && area.Naziv?.trim()
@@ -333,12 +337,43 @@ function AreaCard({ idx, area, days, disabledAll, onField, onToggleLock, onDelet
       && Array.isArray(area.Koordinate) && area.Koordinate.length >= 3;
   }, [disabledAll, area]);
 
+  if (area._locked){
+    return (
+      <div className={`ar-card locked`}>
+        <div className="ar-card-head">
+          <div className="ar-card-title">{area.Naziv?.trim() || 'Novo područje'}</div>
+          <div className="ar-actions">
+            <button className="ar-btn" disabled={disabledAll} onClick={()=>onToggleLock(idx)}>Izmeni</button>
+            <button className="ar-btn" disabled={disabledAll} onClick={()=>onDelete(idx)}>Obriši</button>
+          </div>
+        </div>
+        <div className="ar-summary">
+          <div className="ar-summary-top">
+            <div>
+              <div className="ar-summary-title">{area.Naziv?.trim() || 'Područje'}</div>
+              <div className="ar-summary-day">{dayLabel}</div>
+            </div>
+            <div className="ar-summary-color" style={{ background: fixColor(area.HEXboja || '#00aaff') }} />
+          </div>
+          <div className="ar-summary-meta">
+            <span>Tačaka: {Array.isArray(area.Koordinate) ? area.Koordinate.length : 0}</span>
+            <span>{existingOnSameDay.length ? `Deljeno sa ${existingOnSameDay.length} područja` : 'Samostalno područje'}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`ar-card ${area._locked ? 'locked' : ''}`}>
       <div className="ar-card-head">
         <div className="ar-card-title">{area.Naziv?.trim() || 'Novo područje'}</div>
         <div className="ar-actions">
-          <button className="ar-btn" disabled={disabledAll} onClick={()=>onToggleLock(idx)}>
+          <button
+            className="ar-btn"
+            disabled={disabledAll || (!area._locked && !canSave)}
+            onClick={()=>onToggleLock(idx)}
+          >
             {area._locked ? 'Izmeni' : (area.Id ? 'Sačuvaj izmene' : 'Sačuvaj')}
           </button>
           <button className="ar-btn" disabled={disabledAll} onClick={()=>onDelete(idx)}>Obriši</button>
@@ -418,95 +453,6 @@ function fixColor(hx){
   if (v.length > 7) v = v.slice(0,7);
   return v;
 }
-
-function MapEditor({ color, name, initialPoints, locked, existingPolys, onSave }){
-  const svgRef = useRef(null);
-  const [draft, setDraft] = useState(Array.isArray(initialPoints) ? initialPoints : []);
-  useEffect(()=>{ setDraft(Array.isArray(initialPoints) ? initialPoints : []); }, [initialPoints]);
-
-  function svgCoords(evt){
-    const svg = svgRef.current;
-    if (!svg) return [0,0];
-    const rect = svg.getBoundingClientRect();
-    const x = (evt.clientX - rect.left) / rect.width;
-    const y = (evt.clientY - rect.top) / rect.height;
-    return [clamp(x,0,1), clamp(y,0,1)];
-  }
-  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
-
-  function handleClick(e){
-    if (locked) return;
-    const [x,y] = svgCoords(e);
-    setDraft(prev => [...prev, [x,y]]);
-  }
-
-  function pathD(pts){
-    if (!pts || pts.length === 0) return '';
-    return pts.map(([x,y]) => `${x*100}%,${y*100}%`).join(' ');
-  }
-
-  function centroid(pts){
-    if (!Array.isArray(pts) || pts.length < 3) return [0.5,0.5];
-    let cx=0, cy=0, A=0;
-    for(let i=0;i<pts.length;i++){
-      const [x1,y1] = pts[i] || [0,0];
-      const [x2,y2] = pts[(i+1)%pts.length] || [0,0];
-      const cross = x1*y2 - x2*y1;
-      A += cross;
-      cx += (x1 + x2) * cross;
-      cy += (y1 + y2) * cross;
-    }
-    A = A/2;
-    if (!Number.isFinite(A) || Math.abs(A) < 1e-8) return pts[0];
-    cx = cx/(6*A); cy = cy/(6*A);
-    return [clamp(cx,0,1), clamp(cy,0,1)];
-  }
-
-  const [cx, cy] = centroid(draft||[]);
-  const hasPoly = Array.isArray(draft) && draft.length >= 3;
-
-  return (
-    <div className="map-wrap">
-      <div className="map-toolbar">
-        <button className="ar-btn" disabled={locked || draft.length===0} onClick={()=>setDraft([])}>Obriši sve tačke</button>
-        <button className="ar-btn" disabled={locked || draft.length===0} onClick={()=>setDraft(d=>d.slice(0,-1))}>Vrati unazad</button>
-        <button className="ar-btn" disabled={locked || !hasPoly} onClick={()=>onSave?.(draft)}>Sačuvaj mapu</button>
-      </div>
-
-      <div className="map-canvas" onClick={handleClick}>
-        <svg ref={svgRef} className="map-svg" viewBox="0 0 1000 1000" preserveAspectRatio="none">
-          {(existingPolys||[]).map((p, i) => (
-            Array.isArray(p.points) && p.points.length>=3 ? (
-              <g key={`ex-${i}`}>
-                <polygon className="map-poly-existing"
-                  points={pathD(p.points).replace(/%/g,'')}
-                  style={{ fill: p.color, opacity: 0.35 }} />
-                <text className="map-label"
-                      x={centroid(p.points)[0]*1000}
-                      y={centroid(p.points)[1]*1000}
-                      textAnchor="middle">
-                  {p.name || 'Područje'}
-                </text>
-              </g>
-            ) : null
-          ))}
-
-          {hasPoly && (
-            <>
-              <polygon className="map-poly" points={pathD(draft).replace(/%/g,'')} style={{ fill: color }} />
-              <text className="map-label" x={cx*1000} y={cy*1000} textAnchor="middle">{name||'Područje'}</text>
-            </>
-          )}
-
-          {(draft||[]).map(([x,y],i)=>(
-            <circle key={i} className="map-pin" cx={x*1000} cy={y*1000} r="6" />
-          ))}
-        </svg>
-      </div>
-    </div>
-  );
-}
-
 
 function MapEditorLeaflet({ color, name, initialPoints, locked, existingPolys, onSave }){
   const [draft, setDraft] = React.useState(Array.isArray(initialPoints) ? initialPoints : []);

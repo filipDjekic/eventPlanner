@@ -57,6 +57,43 @@
   opacity: 0.9;
 }
 
+.tk-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tk-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.tk-summary-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--ne-text-strong);
+}
+
+.tk-summary-type {
+  font-size: 0.9rem;
+  color: var(--ne-text-muted);
+}
+
+.tk-summary-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 0.95rem;
+  color: var(--ne-text);
+}
+
+.tk-summary-color {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .tk-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

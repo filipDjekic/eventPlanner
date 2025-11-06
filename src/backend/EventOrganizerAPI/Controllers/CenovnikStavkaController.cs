@@ -40,9 +40,10 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpPut("azuriraj/{id}")]
-        
-        public async Task<IActionResult> Azuriraj([FromBody] AzurirajStavkuDto dto)
+
+        public async Task<IActionResult> Azuriraj(string id, [FromBody] AzurirajStavkuDto dto)
         {
+            dto.Id = id;
             var success = await _stavkaServis.AzurirajStavkuAsync(dto);
             if (!success) return BadRequest("Neuspešna izmena stavke.");
             return Ok("Stavka uspešno ažurirana.");

@@ -20,6 +20,9 @@ namespace EventOrganizerAPI.Models
         public string Dan { get; set; }
 
         [BsonRepresentation(BsonType.ObjectId)]
+        public string DogadjajId { get; set; }
+
+        [BsonRepresentation(BsonType.ObjectId)]
         public List<string> Aktivnosti { get; set; } = new();
     }
 }

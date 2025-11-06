@@ -47,8 +47,9 @@ namespace EventOrganizerAPI.Controllers
         }
 
         [HttpPut("azuriraj/{id}")]
-        public async Task<IActionResult> Azuriraj([FromBody] AzurirajCenovnikDto dto)
+        public async Task<IActionResult> Azuriraj(string id, [FromBody] AzurirajCenovnikDto dto)
         {
+            dto.Id = id;
             var result = await _cenovnikServis.AzurirajCenovnikAsync(dto);
             if (!result) return NotFound();
             return NoContent();

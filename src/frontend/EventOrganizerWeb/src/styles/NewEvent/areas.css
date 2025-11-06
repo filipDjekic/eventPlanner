@@ -54,6 +54,46 @@
   opacity: 0.9;
 }
 
+.ar-summary {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ar-summary-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ar-summary-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: var(--ne-text-strong);
+}
+
+.ar-summary-day {
+  font-size: 0.9rem;
+  color: var(--ne-text-muted);
+}
+
+.ar-summary-color {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--ne-border-strong);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+}
+
+.ar-summary-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 0.95rem;
+  color: var(--ne-text);
+}
+
 .ar-card-head {
   display: flex;
   align-items: center;

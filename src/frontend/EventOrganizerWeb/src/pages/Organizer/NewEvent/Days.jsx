@@ -1,11 +1,54 @@
 // src/pages/Organizer/NewEvent/Days.jsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import Section from './Section';
 import '../../../styles/NewEvent/days.css';
 import * as neweventApi from '../../../services/newEventApi';
 import * as daysApi from '../../../services/daysApi';
+
+const ensureId = (obj) => obj?.Id || obj?.id || obj?._id || obj;
+
+function atMidnight(date){
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function daysBetweenInclusive(start, end){
+  const ms = atMidnight(end).getTime() - atMidnight(start).getTime();
+  return Math.floor(ms / 86400000) + 1;
+}
+
+function addDays(d, n){
+  const x = new Date(atMidnight(d));
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+function ymd(date){
+  const d = atMidnight(date);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function parseDateFlexible(v){
+  if(!v) return null;
+  if(v instanceof Date) return new Date(v.getTime());
+  if(typeof v === 'number') return new Date(v);
+  if(typeof v === 'string'){
+    const m = v.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+    if(m){
+      const dd = parseInt(m[1],10), mm = parseInt(m[2],10)-1, yyyy = parseInt(m[3],10);
+      const d = new Date(yyyy, mm, dd); d.setHours(0,0,0,0); return d;
+    }
+    const iso = new Date(v);
+    if(!isNaN(iso)) return iso;
+  }
+  return null;
+}
 
 export default function Days({ eventId }){
   const [loading, setLoading] = useState(false);
@@ -14,19 +57,14 @@ export default function Days({ eventId }){
 
   const syncingRef = useRef(false);
 
-  const ensureId = (obj) => obj?.Id || obj?.id || obj?._id || obj;
-
-  // Reset (& recreate) – obriši sve dane za događaj, pa kreiraj iz "nextDays"
-  async function resetAndRecreateAllDays(nextDays){
+  const resetAndRecreateAllDays = useCallback(async (nextDays) => {
     if (!eventId || syncingRef.current) return;
     syncingRef.current = true;
     try{
       setLoading(true);
 
-      // 1) obrisi sve postojeće dane za događaj (backend ih briše i čisti Dogadjaj.Dani)
       await daysApi.removeAllForEvent(eventId);
 
-      // 2) kreiraj ponovo sve dane po poretku i skupi ID-jeve
       const ensuredIds = [];
       for (let i = 0; i < nextDays.length; i++){
         const d = nextDays[i];
@@ -42,7 +80,6 @@ export default function Days({ eventId }){
         ensuredIds.push(id);
       }
 
-      // 3) upiši kompletan niz ID-jeva dana u Dogadjaj
       try{
         await neweventApi.updateDayIds(eventId, ensuredIds);
         window.dispatchEvent(new CustomEvent('ne:days:updated', {
@@ -52,7 +89,6 @@ export default function Days({ eventId }){
         console.warn('updateDayIds nije uspeo ili nije definisan:', e);
       }
 
-      // 4) commit lokalnog stanja
       setDays(nextDays.map((d,i)=>({ ...d, Id: ensuredIds[i], _locked: true, RedniBroj: i+1 })));
       setRange(prev => ({ ...prev, count: nextDays.length }));
       toast.success('Dani resetovani i ponovo kreirani.');
@@ -63,34 +99,7 @@ export default function Days({ eventId }){
       syncingRef.current = false;
       setLoading(false);
     }
-  }
-
-
-
-  const disabledAll = !eventId;
-
-  // Helpers 
-  function atMidnight(date){
-    const d = new Date(date);
-    d.setHours(0,0,0,0);
-    return d;
-  }
-  function daysBetweenInclusive(start, end){
-    const ms = atMidnight(end).getTime() - atMidnight(start).getTime();
-    return Math.floor(ms / 86400000) + 1;
-  }
-  function addDays(d, n){
-    const x = new Date(atMidnight(d));
-    x.setDate(x.getDate() + n);
-    return x;
-  }
-  function ymd(date){
-    const d = atMidnight(date);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const dd = String(d.getDate()).padStart(2,'0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
+  }, [eventId]);
 
   // Učitaj događaj i pripremi dane
   useEffect(() => {
@@ -218,7 +227,7 @@ export default function Days({ eventId }){
 
     window.addEventListener('ne:dates', onDates);
     return () => window.removeEventListener('ne:dates', onDates);
-  }, [eventId]);
+  }, [eventId, resetAndRecreateAllDays]);
 
 
 
@@ -266,30 +275,12 @@ export default function Days({ eventId }){
     window.dispatchEvent(new Event('ne:dates:request'));
 
     return () => window.removeEventListener('ne:days', onDays);
-  }, [eventId]);
+  }, [eventId, resetAndRecreateAllDays]);
 
 
   function onChange(idx, field, value){
     setDays(prev => prev.map((d,i)=> i===idx ? ({...d, [field]: value}) : d));
   }
-
-  function parseDateFlexible(v){
-    if(!v) return null;
-    if(v instanceof Date) return new Date(v.getTime());
-    if(typeof v === 'number') return new Date(v);
-    if(typeof v === 'string'){
-      // dd.MM.yyyy ili dd/MM/yyyy ili dd-MM-yyyy
-      const m = v.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
-      if(m){
-        const dd = parseInt(m[1],10), mm = parseInt(m[2],10)-1, yyyy = parseInt(m[3],10);
-        const d = new Date(yyyy, mm, dd); d.setHours(0,0,0,0); return d;
-      }
-      const iso = new Date(v);
-      if(!isNaN(iso)) return iso;
-    }
-    return null;
-  }
-
 
   async function onToggle(idx){
     if (!eventId) return;
@@ -336,6 +327,32 @@ export default function Days({ eventId }){
     }
   }
 
+  async function onDelete(idx){
+    if (!eventId) return;
+    const target = days[idx];
+    if (!target) return;
+    if (target.Id && !window.confirm('Obrisati ovaj dan?')) return;
+
+    const snapshot = days.map((day) => ({ ...day }));
+    const remaining = days
+      .filter((_, i) => i !== idx)
+      .map((day, order) => ({ ...day, RedniBroj: order + 1 }));
+
+    try{
+      if (target.Id){
+        await daysApi.remove(target.Id);
+      }
+      setDays(remaining);
+      const ids = remaining.map((day) => day.Id).filter(Boolean);
+      await neweventApi.updateDayIds(eventId, ids);
+      toast.success('Dan obrisan.');
+    }catch(err){
+      console.error(err);
+      setDays(snapshot);
+      toast.error('Greška pri brisanju dana.');
+    }
+  }
+
   const lockedCount = days.filter((d) => d._locked).length;
   const headerBadges = [
     loading ? { label: 'Učitavanje...', tone: 'info' } : null,
@@ -371,25 +388,35 @@ export default function Days({ eventId }){
                     <button className="dy-btn" disabled={!eventId || loading} onClick={()=>onToggle(idx)}>
                       {d._locked ? 'Izmeni' : (d.Id ? 'Sačuvaj izmene' : 'Sačuvaj')}
                     </button>
+                    <button className="dy-btn dy-btn-danger" disabled={!eventId || loading} onClick={()=>onDelete(idx)}>
+                      Obriši
+                    </button>
                   </div>
                 </div>
 
                 <div className="dy-sep" />
 
-                <div className="dy-grid">
-                  <label className="block">
-                    <div className="label mb-1">Naziv</div>
-                    <input className="input" value={d.Naziv} onChange={e=>onChange(idx,'Naziv', e.target.value)} disabled={loading || d._locked}/>
-                  </label>
-                  <label className="block">
-                    <div className="label mb-1">Opis</div>
-                    <input className="input" value={d.Opis} onChange={e=>onChange(idx,'Opis', e.target.value)} disabled={loading || d._locked}/>
-                  </label>
-                  <label className="block">
-                    <div className="label mb-1">Datum održavanja</div>
-                    <input className="input" type="date" value={d.DatumOdrzavanja} readOnly disabled/>
-                  </label>
-                </div>
+                {d._locked ? (
+                  <div className="dy-summary">
+                    <div className="dy-summary-title">{d.Naziv?.trim() || `Dan ${d.RedniBroj}`}</div>
+                    <div className="dy-summary-desc">{d.Opis?.trim() || 'Bez opisa'}</div>
+                  </div>
+                ) : (
+                  <div className="dy-grid">
+                    <label className="block">
+                      <div className="label mb-1">Naziv</div>
+                      <input className="input" value={d.Naziv} onChange={e=>onChange(idx,'Naziv', e.target.value)} disabled={loading || d._locked}/>
+                    </label>
+                    <label className="block">
+                      <div className="label mb-1">Opis</div>
+                      <input className="input" value={d.Opis} onChange={e=>onChange(idx,'Opis', e.target.value)} disabled={loading || d._locked}/>
+                    </label>
+                    <label className="block">
+                      <div className="label mb-1">Datum održavanja</div>
+                      <input className="input" type="date" value={d.DatumOdrzavanja} readOnly disabled/>
+                    </label>
+                  </div>
+                )}
               </div>
             ))}
           </div>

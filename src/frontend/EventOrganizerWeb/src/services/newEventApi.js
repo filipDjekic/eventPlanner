@@ -66,3 +66,17 @@ export async function updateDayIds(eventId, dayIds){
   const payload = { ...rest, Id: eventId, Dani: dayIds };
   return await updateDraft(eventId, payload);  // pošalji PUNE podatke + izmenjene Dani
 }
+
+export async function updatePriceListIds(eventId, priceListIds){
+  const ev = await getById(eventId);
+  const { Id, _id, ...rest } = ev || {};
+  const payload = { ...rest, Id: eventId, Cenovnici: Array.from(new Set(priceListIds || [])) };
+  return await updateDraft(eventId, payload);
+}
+
+export async function updateActivityIds(eventId, activityIds){
+  const ev = await getById(eventId);
+  const { Id, _id, ...rest } = ev || {};
+  const payload = { ...rest, Id: eventId, Aktivnosti: Array.from(new Set(activityIds || [])) };
+  return await updateDraft(eventId, payload);
+}
