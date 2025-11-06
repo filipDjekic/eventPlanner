@@ -1,71 +1,182 @@
 /* src/styles/NewEvent/locations.css */
 
-/* Uvozimo izgled iz areas.css (:contentReference[oaicite:6]{index=6}) – ovde dodajemo samo specifičnosti za pin i resurse */
-.loc-pin { stroke:#111; fill:#fff; opacity:.9; }
-.loc-pin-label { font-size:10px; fill:#eee; text-shadow: 0 1px 1px #000; }
+/* Uvozimo izgled iz areas.css – ovde dodajemo specifičnosti za pin i resurse */
+.loc-pin {
+  stroke: #8b5cf6;
+  fill: #8b5cf6;
+  opacity: 0.9;
+}
+
+.loc-pin-label {
+  font-size: 10px;
+  fill: var(--ne-text);
+  text-shadow: 0 1px 1px #000;
+}
 
 .loc-res-wrap {
   display: grid;
   grid-template-columns: 7fr 3fr;
-  gap: 12px;
-  margin-top: 16px;
-}
-@media (max-width: 1100px){
-  .loc-res-wrap { grid-template-columns: 1fr; }
+  gap: 16px;
+  margin-top: 18px;
 }
 
-.loc-res-table {
-  border:1px solid #333; border-radius:12px; background:#0f0f0f; padding:12px;
+@media (max-width: 1100px) {
+  .loc-res-wrap {
+    grid-template-columns: 1fr;
+  }
 }
 
-.loc-table { width:100%; border-collapse: collapse; }
-.loc-table th, .loc-table td { border-bottom:1px solid #222; padding:8px; }
-.loc-table th { text-align:left; color:#bbb; font-weight:600; }
-.loc-table td { color:#ddd; }
-
+.loc-res-table,
 .loc-res-form {
-  border:1px solid #333; border-radius:12px; background:#0f0f0f; padding:12px;
+  border: 1px solid var(--ne-border);
+  border-radius: 18px;
+  background: var(--ne-surface-alt);
+  padding: 16px;
+  box-shadow: var(--ne-shadow-sm);
+}
+
+.loc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.loc-table th,
+.loc-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 12px;
+  color: var(--ne-text);
+}
+
+.loc-table th {
+  text-align: left;
+  color: var(--ne-text-muted);
+  font-weight: 600;
+}
+
+.loc-table tbody tr:nth-child(even) {
+  background: var(--ne-table-row-alt);
+}
+
+.loc-table tbody tr:hover {
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.loc-table th,
+.loc-table td {
+  vertical-align: middle;
+}
+
+.loc-table th.num,
+.loc-table td.num {
+  text-align: right;
+  width: 100px;
+}
+
+.loc-table .center {
+  text-align: center;
+}
+
+.loc-table .muted {
+  color: var(--ne-text-muted);
+}
+
+.loc-res-table .label {
+  margin-bottom: 8px;
+  display: block;
+  color: var(--ne-text-muted);
+}
+
+.loc-res-form .input,
+.loc-res-form .select,
+.loc-res-form .textarea {
+  background: var(--ne-input-bg);
+  border: 1px solid var(--ne-input-border);
+  color: var(--ne-text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.loc-res-form .input:focus,
+.loc-res-form .select:focus,
+.loc-res-form .textarea:focus {
+  outline: none;
+  border-color: var(--ne-input-border-focus);
+  box-shadow: var(--ne-input-shadow-focus);
 }
 
 /* Pin (divIcon) */
-.pin-divicon { pointer-events: none; } /* klik ide na mapu, ne na HTML ikonu */
-.pin-wrap { position: relative; transform: translate(-50%, -100%); }
+.pin-divicon {
+  pointer-events: none;
+}
+
+.pin-wrap {
+  position: relative;
+  transform: translate(-50%, -100%);
+}
+
 .pin-label {
   position: relative;
-  left: 50%; transform: translateX(-50%);
-  padding: 2px 6px; border-radius: 4px;
-  color: #111; font-size: 12px; font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0,0,0,.4);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #111;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   white-space: nowrap;
 }
+
 .pin-tail {
   position: relative;
-  left: 50%; transform: translateX(-50%);
-  width: 0; height: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-top: 8px solid #8888ff; /* boja se prepisuje inline-om */
+  border-top: 8px solid #8b5cf6;
 }
-.map-canvas { height: 420px; }
 
-/* ----- Tabela finese ----- */
-.loc-table th, .loc-table td { vertical-align: middle; }
-.loc-table th.num, .loc-table td.num { text-align: right; width: 100px; }
-.loc-table .center { text-align: center; }
-.loc-table .muted { color: #999; }
-.loc-res-table .label { margin-bottom: 8px; display: block; }
+.map-canvas {
+  height: 420px;
+}
 
 /* ----- Modal za opis ----- */
 .modal-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,.55);
-  display: flex; align-items: center; justify-content: center; z-index: 50;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
 }
+
 .modal {
-  background: #0f0f0f; border: 1px solid #333; border-radius: 12px; width: min(640px, 92vw);
-  box-shadow: 0 10px 30px rgba(0,0,0,.45); padding: 12px;
+  background: var(--ne-surface);
+  border: 1px solid var(--ne-border);
+  border-radius: 16px;
+  width: min(640px, 92vw);
+  box-shadow: var(--ne-shadow-md);
+  padding: 18px;
 }
+
 .modal-head {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
 }
-.modal-title { font-weight: 700; }
-.modal-body { color: #ddd; line-height: 1.5; white-space: pre-wrap; }
+
+.modal-title {
+  font-weight: 700;
+  color: var(--ne-text-strong);
+}
+
+.modal-body {
+  color: var(--ne-text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}

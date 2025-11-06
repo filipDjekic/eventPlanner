@@ -1,86 +1,160 @@
 /* src/styles/NewEvent/days.css */
 
 /* Wrapper i header (u skladu sa tickets.css/basicinfo.css) */
-.dy-wrap{margin: 5% 0%;}
-.dy-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
-.dy-btn{
-  border:1px solid rgba(255,255,255,0.18);
-  border-radius:8px;
-  padding:8px 12px;
-  background:rgba(255,255,255,0.06);
-  cursor:pointer;
+.dy-wrap {
+  margin-top: 32px;
 }
-.dy-btn:disabled{opacity:.6;cursor:not-allowed;}
-.dy-btn:hover{background:rgba(255,255,255,0.10);border-color:rgba(255,255,255,0.25);}
+
+.dy-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dy-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--ne-text-strong);
+}
+
+.dy-btn {
+  border: 1px solid var(--ne-border-strong);
+  border-radius: 12px;
+  padding: 10px 16px;
+  background: var(--ne-btn-secondary);
+  color: var(--ne-text);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.dy-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.dy-btn:not(:disabled):hover {
+  background: var(--ne-btn-secondary-hover);
+  transform: translateY(-1px);
+}
 
 /* Info poruka */
-.dy-note{margin-bottom:10px; opacity:.85}
+.dy-note {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--ne-note-bg);
+  border: 1px solid var(--ne-note-border);
+  color: var(--ne-text);
+}
 
 /* Lista i kartice */
-.dy-list{display:flex;flex-direction:column;gap:12px;}
-.dy-card{border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:12px;background:rgba(255,255,255,0.04);}
+.dy-main {
+  border: 1px solid var(--ne-border);
+  border-radius: 20px;
+  padding: 18px;
+  background: var(--ne-surface);
+  box-shadow: var(--ne-shadow-sm);
+}
+
+.dy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dy-card {
+  border: 1px solid var(--ne-border);
+  border-radius: 16px;
+  background: var(--ne-surface-alt);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+
+.dy-card:hover {
+  border-color: var(--ne-border-strong);
+  box-shadow: var(--ne-shadow-md);
+  transform: translateY(-1px);
+}
 
 /* Grid za polja (preslikano iz tickets.css col-grid) */
-.dy-grid{display:grid;grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px}
-@media (max-width: 1024px){
-  .dy-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
-}
-@media (max-width: 640px){
-  .dy-grid{grid-template-columns:1fr;}
-}
-
-/* Disabled input look (isti kao basicinfo.css) */
-.input:disabled{
-  opacity:.6;
-  cursor:not-allowed;
-  background: rgba(255,255,255,0.06);
-}
-/* Glavna “podforma” (okvir oko cele liste dana) */
-.dy-main{
-  border:1px solid rgba(255,255,255,0.12);
-  border-radius:16px;
-  padding:16px;
-  background:rgba(255,255,255,0.03);
-  box-shadow:0 6px 20px rgba(0,0,0,0.25);
+.dy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 12px 14px 16px;
 }
 
-/* Doterivanje kartice jednog dana */
-.dy-card{
-  border-radius:14px;
-  padding:0;               /* header + body imaju svoje padding-e */
-  overflow:hidden;
-  transition:border-color .15s ease, box-shadow .15s ease, transform .12s ease;
+@media (max-width: 1024px) {
+  .dy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
-.dy-card:hover{
-  border-color:rgba(255,255,255,0.18);
-  box-shadow:0 8px 26px rgba(0,0,0,0.28);
-  transform:translateY(-1px);
+
+@media (max-width: 640px) {
+  .dy-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Header kartice (dan + datum + dugme) */
-.dy-card-head{
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px;
-  background:rgba(255,255,255,0.04);
+.dy-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--ne-surface-soft);
 }
-.dy-title{ font-weight:600; }
-.dy-badge{
-  font-size:12px; opacity:.9;
-  border:1px solid rgba(255,255,255,0.15);
-  border-radius:999px; padding:4px 8px;
+
+.dy-badge {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--ne-text);
+  background: rgba(139, 92, 246, 0.18);
 }
-.dy-spacer{ flex:1; }
+
+.dy-spacer {
+  flex: 1;
+}
 
 /* Separator između headera i tela */
-.dy-sep{ height:1px; background:rgba(255,255,255,0.10); }
+.dy-sep {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
 
-/* Unutrašnji padding grida u telu kartice */
-.dy-grid{ padding:12px; }
+/* Dugme poravnaj u headeru */
+.dy-actions {
+  display: flex;
+  align-items: center;
+}
 
-/* Dugme poravnaј u headeru */
-.dy-actions{ display:flex; align-items:center; }
+.dy-actions .btn {
+  border-radius: 12px;
+  padding: 8px 14px;
+  background: var(--ne-btn-secondary);
+  border: 1px solid var(--ne-border-strong);
+  color: var(--ne-text);
+  font-weight: 600;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.dy-actions .btn:not(:disabled):hover {
+  background: var(--ne-btn-secondary-hover);
+  transform: translateY(-1px);
+}
+
+.dy-actions .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
 
 /* Zaključano stanje – suptilno priguši inputs */
-.dy-card.is-locked .input{
-  opacity:.75;
+.dy-card.is-locked .input {
+  opacity: 0.75;
 }
