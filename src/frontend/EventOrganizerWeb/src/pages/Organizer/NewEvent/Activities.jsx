@@ -8,6 +8,7 @@ import '../../../styles/NewEvent/activities.css';
 import * as daysApi from '../../../services/daysApi';
 import * as locationsApi from '../../../services/locationsApi';
 import * as activitiesApi from '../../../services/activitiesApi';
+import * as schedulesApi from '../../../services/schedulesApi';
 import * as neweventApi from '../../../services/newEventApi';
 
 const TIPOVI_AKTIVNOSTI = ['Koncert', 'Predavanje', 'Igrica', 'Izlozba', 'Radionica', 'Druzenje', 'Ostalo'];
@@ -52,6 +53,21 @@ function normalizeLocation(raw){
   };
 }
 
+function normalizeSchedule(raw, index = 0){
+  const id = schedulesApi.normalizeId(raw);
+  if (!id) return null;
+  const dogadjajId = raw?.DogadjajId || raw?.dogadjajId || raw?.Dogadjaj || raw?.dogadjaj || '';
+  return {
+    Id: id,
+    Naziv: raw?.Naziv || raw?.naziv || `Raspored ${index + 1}`,
+    Opis: raw?.Opis || raw?.opis || '',
+    Lokacija: raw?.Lokacija || raw?.lokacija || '',
+    Dan: raw?.Dan || raw?.dan || '',
+    DogadjajId: dogadjajId,
+    Aktivnosti: Array.isArray(raw?.Aktivnosti || raw?.aktivnosti) ? (raw.Aktivnosti || raw.aktivnosti) : [],
+  };
+}
+
 function normalizeActivity(raw){
   const id = activitiesApi.normalizeId(raw);
   if (!id) return null;
@@ -67,6 +83,7 @@ function normalizeActivity(raw){
     Dan: raw?.Dan || raw?.dan || '',
     Dogadjaj: raw?.Dogadjaj || raw?.dogadjaj || '',
     Tip: raw?.Tip || raw?.tip || 'Ostalo',
+    RasporedId: raw?.RasporedId || raw?.rasporedId || raw?.Raspored || raw?.raspored || '',
     Start: start,
     End: end,
   };
@@ -93,6 +110,13 @@ function toInputValue(date){
   return local.toISOString().slice(0, 16);
 }
 
+const EMPTY_SCHEDULE_FORM = {
+  Naziv: '',
+  Opis: '',
+  Dan: '',
+  Lokacija: '',
+};
+
 const EMPTY_FORM = {
   Naziv: '',
   Opis: '',
@@ -101,18 +125,24 @@ const EMPTY_FORM = {
   Tip: 'Ostalo',
   start: '',
   end: '',
+  Raspored: '',
 };
 
 export default function Activities({ eventId }){
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [scheduleSaving, setScheduleSaving] = useState(false);
 
   const [days, setDays] = useState([]);
   const [locations, setLocations] = useState([]);
+  const [schedules, setSchedules] = useState([]);
   const [activities, setActivities] = useState([]);
 
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [editingId, setEditingId] = useState(null);
+  const [scheduleForm, setScheduleForm] = useState({ ...EMPTY_SCHEDULE_FORM });
+  const [editingScheduleId, setEditingScheduleId] = useState(null);
+  const [selectedScheduleId, setSelectedScheduleId] = useState('');
 
   const hasEvent = Boolean(eventId);
 
@@ -153,6 +183,35 @@ export default function Activities({ eventId }){
     }
   }, [eventId]);
 
+  const fetchSchedules = useCallback(async () => {
+    if (!eventId){
+      setSchedules([]);
+      setSelectedScheduleId('');
+      return;
+    }
+    try{
+      const list = await schedulesApi.listByEvent(eventId).catch(() => []);
+      const normalized = (list || []).map(normalizeSchedule).filter(Boolean);
+      normalized.sort((a, b) => a.Naziv.localeCompare(b.Naziv || ''));
+      setSchedules(normalized);
+      setSelectedScheduleId(prev => {
+        if (prev && normalized.some(item => String(item.Id) === String(prev))){
+          return prev;
+        }
+        return normalized[0]?.Id || '';
+      });
+      const scheduleIds = normalized.map(item => item.Id).filter(Boolean);
+      try {
+        await neweventApi.updateScheduleIds(eventId, scheduleIds);
+      } catch (err) {
+        console.warn('Ne mogu da sinhronizujem rasporede sa događajem:', err);
+      }
+    }catch(err){
+      console.warn('Greška pri učitavanju rasporeda:', err);
+      toast.error('Ne mogu da osvežim rasporede.');
+    }
+  }, [eventId]);
+
   const refreshActivities = useCallback(async () => {
     if (!eventId){
       setActivities([]);
@@ -187,19 +246,23 @@ export default function Activities({ eventId }){
       setActivities([]);
       setDays([]);
       setLocations([]);
+      setSchedules([]);
+      setScheduleForm({ ...EMPTY_SCHEDULE_FORM });
+      setEditingScheduleId(null);
+      setSelectedScheduleId('');
       return;
     }
     let alive = true;
     (async () => {
       try{
         setLoading(true);
-        await Promise.all([fetchDays(), fetchLocations(), refreshActivities()]);
+        await Promise.all([fetchDays(), fetchLocations(), fetchSchedules(), refreshActivities()]);
       }finally{
         if (alive) setLoading(false);
       }
     })();
     return () => { alive = false; };
-  }, [eventId, fetchDays, fetchLocations, refreshActivities]);
+  }, [eventId, fetchDays, fetchLocations, fetchSchedules, refreshActivities]);
 
   useEffect(() => {
     function onDaysUpdated(e){
@@ -225,13 +288,35 @@ export default function Activities({ eventId }){
   }, [eventId, fetchLocations]);
 
   useEffect(() => {
+    function onSchedulesUpdated(e){
+      if (!eventId) return;
+      const detailId = e?.detail?.eventId;
+      if (detailId && String(detailId) !== String(eventId)) return;
+      fetchSchedules();
+      refreshActivities();
+    }
+    window.addEventListener('ne:schedules:updated', onSchedulesUpdated);
+    return () => window.removeEventListener('ne:schedules:updated', onSchedulesUpdated);
+  }, [eventId, fetchSchedules, refreshActivities]);
+
+  useEffect(() => {
     if (editingId) return;
     setForm(prev => ({
       ...prev,
       Dan: prev.Dan || days[0]?.Id || '',
       Lokacija: prev.Lokacija || locations[0]?.Id || '',
+      Raspored: selectedScheduleId || '',
     }));
-  }, [days, locations, editingId]);
+  }, [days, locations, editingId, selectedScheduleId]);
+
+  useEffect(() => {
+    if (editingScheduleId) return;
+    setScheduleForm(prev => ({
+      ...prev,
+      Dan: prev.Dan || days[0]?.Id || '',
+      Lokacija: prev.Lokacija || locations[0]?.Id || '',
+    }));
+  }, [days, locations, editingScheduleId]);
 
   const dayById = useMemo(() => {
     const map = new Map();
@@ -245,10 +330,19 @@ export default function Activities({ eventId }){
     return map;
   }, [locations]);
 
+  const scheduleById = useMemo(() => {
+    const map = new Map();
+    schedules.forEach(s => { if (s?.Id) map.set(String(s.Id), s); });
+    return map;
+  }, [schedules]);
+
   const scheduleRows = useMemo(() => {
-    return activities.map(act => {
-      const day = dayById.get(String(act.Dan || ''));
-      const loc = locationById.get(String(act.Lokacija || ''));
+    if (!selectedScheduleId) return [];
+    return activities
+      .filter(act => String(act.RasporedId || '') === String(selectedScheduleId))
+      .map(act => {
+        const day = dayById.get(String(act.Dan || ''));
+        const loc = locationById.get(String(act.Lokacija || ''));
       const dayStamp = day?.timestamp ?? 0;
       const start = act.Start && !Number.isNaN(act.Start.getTime()) ? act.Start : null;
       const end = act.End && !Number.isNaN(act.End.getTime()) ? act.End : null;
@@ -263,12 +357,20 @@ export default function Activities({ eventId }){
         SortKey: dayStamp,
         StartSort: start ? start.getTime() : 0,
       };
-    }).sort((a, b) => {
-      if (a.SortKey !== b.SortKey) return a.SortKey - b.SortKey;
-      if (a.StartSort !== b.StartSort) return a.StartSort - b.StartSort;
-      return a.Naziv.localeCompare(b.Naziv || '');
-    });
-  }, [activities, dayById, locationById]);
+      }).sort((a, b) => {
+        if (a.SortKey !== b.SortKey) return a.SortKey - b.SortKey;
+        if (a.StartSort !== b.StartSort) return a.StartSort - b.StartSort;
+        return a.Naziv.localeCompare(b.Naziv || '');
+      });
+  }, [activities, dayById, locationById, selectedScheduleId]);
+
+  const selectedSchedule = useMemo(() => {
+    if (!selectedScheduleId) return null;
+    return scheduleById.get(String(selectedScheduleId)) || null;
+  }, [scheduleById, selectedScheduleId]);
+
+  const selectedDay = selectedSchedule ? dayById.get(String(selectedSchedule.Dan || '')) : null;
+  const selectedLocation = selectedSchedule ? locationById.get(String(selectedSchedule.Lokacija || '')) : null;
 
   const totalScheduleEntries = scheduleRows.length;
 
@@ -277,8 +379,116 @@ export default function Activities({ eventId }){
   };
 
   const resetForm = () => {
-    setForm({ ...EMPTY_FORM, Dan: days[0]?.Id || '', Lokacija: locations[0]?.Id || '' });
+    setForm({
+      ...EMPTY_FORM,
+      Dan: days[0]?.Id || '',
+      Lokacija: locations[0]?.Id || '',
+      Raspored: selectedScheduleId || '',
+    });
     setEditingId(null);
+  };
+
+  const onScheduleField = (field, value) => {
+    setScheduleForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const resetScheduleForm = () => {
+    setScheduleForm({
+      ...EMPTY_SCHEDULE_FORM,
+      Dan: days[0]?.Id || '',
+      Lokacija: locations[0]?.Id || '',
+    });
+    setEditingScheduleId(null);
+  };
+
+  const validateSchedule = () => {
+    if (!hasEvent){
+      toast.error('Sačuvaj osnovne informacije o događaju.');
+      return false;
+    }
+    if (!scheduleForm.Naziv.trim()){
+      toast.error('Unesi naziv rasporeda.');
+      return false;
+    }
+    if (!scheduleForm.Dan){
+      toast.error('Izaberi dan za raspored.');
+      return false;
+    }
+    if (!scheduleForm.Lokacija){
+      toast.error('Izaberi lokaciju za raspored.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleScheduleSubmit = async (e) => {
+    e?.preventDefault();
+    if (!validateSchedule()) return;
+
+    const payload = {
+      Naziv: scheduleForm.Naziv.trim(),
+      Opis: scheduleForm.Opis.trim(),
+      Dan: scheduleForm.Dan,
+      Lokacija: scheduleForm.Lokacija,
+      DogadjajId: eventId,
+    };
+
+    try{
+      setScheduleSaving(true);
+      if (editingScheduleId){
+        await schedulesApi.update(editingScheduleId, { Id: editingScheduleId, ...payload });
+        toast.success('Raspored je ažuriran.');
+      }else{
+        const created = await schedulesApi.create(payload);
+        toast.success('Raspored je kreiran.');
+        const createdId = created?.Id || created?._id || created?.id;
+        if (createdId){
+          setSelectedScheduleId(String(createdId));
+        }
+      }
+      await fetchSchedules();
+      await refreshActivities();
+      resetScheduleForm();
+      window.dispatchEvent(new CustomEvent('ne:schedules:updated', { detail: { eventId } }));
+    }catch(err){
+      console.error('Čuvanje rasporeda nije uspelo:', err);
+      toast.error('Greška pri čuvanju rasporeda.');
+    }finally{
+      setScheduleSaving(false);
+    }
+  };
+
+  const handleScheduleEdit = (schedule) => {
+    if (!schedule?.Id) return;
+    setEditingScheduleId(schedule.Id);
+    setScheduleForm({
+      Naziv: schedule.Naziv || '',
+      Opis: schedule.Opis || '',
+      Dan: schedule.Dan || '',
+      Lokacija: schedule.Lokacija || '',
+    });
+    setSelectedScheduleId(String(schedule.Id));
+  };
+
+  const handleScheduleDelete = async (schedule) => {
+    if (!schedule?.Id) return;
+    if (!window.confirm('Obrisati ovaj raspored?')) return;
+    try{
+      setScheduleSaving(true);
+      await schedulesApi.remove(schedule.Id);
+      toast.success('Raspored obrisan.');
+      await fetchSchedules();
+      await refreshActivities();
+      if (editingScheduleId === schedule.Id){
+        resetScheduleForm();
+      }
+      window.dispatchEvent(new CustomEvent('ne:schedules:updated', { detail: { eventId } }));
+    }catch(err){
+      console.error('Brisanje rasporeda nije uspelo:', err);
+      toast.error('Greška pri brisanju rasporeda.');
+    }finally{
+      setScheduleSaving(false);
+    }
   };
 
   const validate = () => {
@@ -288,6 +498,11 @@ export default function Activities({ eventId }){
     }
     if (!form.Naziv.trim()){
       toast.error('Unesi naziv aktivnosti.');
+      return null;
+    }
+    const scheduleId = form.Raspored || selectedScheduleId;
+    if (!scheduleId){
+      toast.error('Izaberi raspored kojem aktivnost pripada.');
       return null;
     }
     if (!form.Dan){
@@ -312,7 +527,7 @@ export default function Activities({ eventId }){
       toast.error('Vreme kraja mora biti nakon početka.');
       return null;
     }
-    return { start, end };
+    return { start, end, scheduleId };
   };
 
   const handleSubmit = async (e) => {
@@ -329,6 +544,7 @@ export default function Activities({ eventId }){
       Tip: form.Tip || 'Ostalo',
       DatumVremePocetka: times.start.toISOString(),
       DatumVremeKraja: times.end.toISOString(),
+      RasporedId: times.scheduleId,
     };
 
     try{
@@ -352,6 +568,9 @@ export default function Activities({ eventId }){
 
   const handleEdit = (activity) => {
     setEditingId(activity.Id);
+    if (activity.RasporedId){
+      setSelectedScheduleId(String(activity.RasporedId));
+    }
     setForm({
       Naziv: activity.Naziv || '',
       Opis: activity.Opis || '',
@@ -360,6 +579,7 @@ export default function Activities({ eventId }){
       Tip: activity.Tip || 'Ostalo',
       start: toInputValue(activity.Start),
       end: toInputValue(activity.End),
+      Raspored: activity.RasporedId || '',
     });
   };
 
@@ -382,18 +602,21 @@ export default function Activities({ eventId }){
     }
   };
 
-  const disableForm = !hasEvent || saving;
+  const disableScheduleForm = !hasEvent || scheduleSaving;
+  const disableActivityForm = !hasEvent || saving || !selectedScheduleId || scheduleSaving;
 
   return (
     <Section
-      title="Aktivnosti i raspored"
-      subtitle="Planiraj program događaja kroz aktivnosti, njihove lokacije i termine."
+      title="Rasporedi i aktivnosti"
+      subtitle="Kreiraj rasporede po danima i lokacijama, a zatim im pridruži aktivnosti sa preciznim terminima."
       badges={[
         loading ? { label: 'Učitavanje...', tone: 'info' } : null,
-        saving ? { label: 'Čuvanje...', tone: 'info' } : null,
+        scheduleSaving ? { label: 'Čuvanje rasporeda...', tone: 'info' } : null,
+        saving ? { label: 'Čuvanje aktivnosti...', tone: 'info' } : null,
         !hasEvent ? { label: 'Draft nije kreiran', tone: 'warning' } : null,
-        { label: `Aktivnosti: ${activities.length || 0}` },
-        { label: `Raspored: ${totalScheduleEntries}` },
+        { label: `Rasporedi: ${schedules.length || 0}` },
+        { label: `Aktivnosti ukupno: ${activities.length || 0}` },
+        { label: `U rasporedu: ${totalScheduleEntries}` },
       ].filter(Boolean)}
     >
       {!hasEvent && (
@@ -401,123 +624,295 @@ export default function Activities({ eventId }){
       )}
 
       <div className="act-grid">
-        <form className="act-form" onSubmit={handleSubmit}>
-          <h3>{editingId ? 'Izmena aktivnosti' : 'Dodaj novu aktivnost'}</h3>
-
-          <label className="act-field">
-            <span>Naziv aktivnosti</span>
-            <input
-              className="act-input"
-              value={form.Naziv}
-              onChange={(e) => onField('Naziv', e.target.value)}
-              placeholder="npr. Otvaranje festivala"
-              disabled={disableForm}
-            />
-          </label>
-
-          <label className="act-field">
-            <span>Opis (opciono)</span>
-            <textarea
-              className="act-textarea"
-              rows={3}
-              value={form.Opis}
-              onChange={(e) => onField('Opis', e.target.value)}
-              placeholder="Detalji, govornici, napomene..."
-              disabled={disableForm}
-            />
-          </label>
-
-          <div className="act-two-col">
-            <label className="act-field">
-              <span>Dan</span>
-              <select
-                className="act-input"
-                value={form.Dan}
-                onChange={(e) => onField('Dan', e.target.value)}
-                disabled={disableForm || days.length === 0}
-              >
-                <option value="">-- izaberi --</option>
-                {days.map(day => (
-                  <option key={day.Id} value={day.Id}>
-                    {day.Naziv}{day.DatumLabel ? ` · ${day.DatumLabel}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
+        <div className="act-left">
+          <form className="act-form act-form--schedule" onSubmit={handleScheduleSubmit}>
+            <h3>{editingScheduleId ? 'Izmena rasporeda' : 'Dodaj novi raspored'}</h3>
 
             <label className="act-field">
-              <span>Lokacija</span>
-              <select
-                className="act-input"
-                value={form.Lokacija}
-                onChange={(e) => onField('Lokacija', e.target.value)}
-                disabled={disableForm || locations.length === 0}
-              >
-                <option value="">-- izaberi --</option>
-                {locations.map(loc => (
-                  <option key={loc.Id} value={loc.Id}>{loc.Naziv}{loc.Tip ? ` · ${loc.Tip}` : ''}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <label className="act-field">
-            <span>Tip aktivnosti</span>
-            <select
-              className="act-input"
-              value={form.Tip}
-              onChange={(e) => onField('Tip', e.target.value)}
-              disabled={disableForm}
-            >
-              {TIPOVI_AKTIVNOSTI.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </label>
-
-          <div className="act-two-col">
-            <label className="act-field">
-              <span>Početak</span>
+              <span>Naziv rasporeda</span>
               <input
                 className="act-input"
-                type="datetime-local"
-                value={form.start}
-                onChange={(e) => onField('start', e.target.value)}
-                disabled={disableForm}
+                value={scheduleForm.Naziv}
+                onChange={(e) => onScheduleField('Naziv', e.target.value)}
+                placeholder="npr. Jutarnji blok"
+                disabled={disableScheduleForm}
               />
             </label>
-            <label className="act-field">
-              <span>Kraj</span>
-              <input
-                className="act-input"
-                type="datetime-local"
-                value={form.end}
-                onChange={(e) => onField('end', e.target.value)}
-                disabled={disableForm}
-              />
-            </label>
-          </div>
 
-          <div className="act-actions">
-            <button className="act-btn" type="submit" disabled={disableForm}>
-              {editingId ? 'Sačuvaj izmene' : 'Dodaj aktivnost'}
-            </button>
-            {editingId && (
-              <button
-                className="act-btn act-secondary"
-                type="button"
-                onClick={resetForm}
-                disabled={saving}
-              >
-                Otkaži izmenu
+            <label className="act-field">
+              <span>Opis (opciono)</span>
+              <textarea
+                className="act-textarea"
+                rows={3}
+                value={scheduleForm.Opis}
+                onChange={(e) => onScheduleField('Opis', e.target.value)}
+                placeholder="Kratak opis rasporeda, ciljne grupe..."
+                disabled={disableScheduleForm}
+              />
+            </label>
+
+            <div className="act-two-col">
+              <label className="act-field">
+                <span>Dan</span>
+                <select
+                  className="act-input"
+                  value={scheduleForm.Dan}
+                  onChange={(e) => onScheduleField('Dan', e.target.value)}
+                  disabled={disableScheduleForm || days.length === 0}
+                >
+                  <option value="">-- izaberi --</option>
+                  {days.map(day => (
+                    <option key={day.Id} value={day.Id}>
+                      {day.Naziv}{day.DatumLabel ? ` · ${day.DatumLabel}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="act-field">
+                <span>Lokacija</span>
+                <select
+                  className="act-input"
+                  value={scheduleForm.Lokacija}
+                  onChange={(e) => onScheduleField('Lokacija', e.target.value)}
+                  disabled={disableScheduleForm || locations.length === 0}
+                >
+                  <option value="">-- izaberi --</option>
+                  {locations.map(loc => (
+                    <option key={loc.Id} value={loc.Id}>{loc.Naziv}{loc.Tip ? ` · ${loc.Tip}` : ''}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="act-actions">
+              <button className="act-btn" type="submit" disabled={disableScheduleForm}>
+                {editingScheduleId ? 'Sačuvaj raspored' : 'Dodaj raspored'}
               </button>
+              {editingScheduleId && (
+                <button
+                  className="act-btn act-secondary"
+                  type="button"
+                  onClick={resetScheduleForm}
+                  disabled={scheduleSaving}
+                >
+                  Otkaži izmenu
+                </button>
+              )}
+            </div>
+          </form>
+
+          <div className="schedule-list">
+            <div className="schedule-list__header">
+              <h4>Postojeći rasporedi</h4>
+              <span className="schedule-list__counter">{schedules.length}</span>
+            </div>
+            {schedules.length === 0 ? (
+              <div className="schedule-list__empty">Dodaj raspored kako bi planirao aktivnosti.</div>
+            ) : (
+              <ul className="schedule-list__items">
+                {schedules.map(schedule => {
+                  const day = dayById.get(String(schedule.Dan || ''));
+                  const loc = locationById.get(String(schedule.Lokacija || ''));
+                  const isActive = String(schedule.Id) === String(selectedScheduleId);
+                  return (
+                    <li
+                      key={schedule.Id}
+                      className={`schedule-list__item${isActive ? ' schedule-list__item--active' : ''}`}
+                    >
+                      <button
+                        type="button"
+                        className="schedule-list__select"
+                        onClick={() => setSelectedScheduleId(String(schedule.Id))}
+                        disabled={scheduleSaving}
+                      >
+                        <span className="schedule-list__name">{schedule.Naziv}</span>
+                        <span className="schedule-list__meta">
+                          {(day?.Naziv || 'Dan')}{day?.DatumLabel ? ` · ${day.DatumLabel}` : ''} · {(loc?.Naziv || 'Lokacija')}
+                        </span>
+                      </button>
+                      <div className="schedule-list__actions">
+                        <button
+                          type="button"
+                          className="act-btn act-secondary schedule-list__action"
+                          onClick={() => handleScheduleEdit(schedule)}
+                          disabled={scheduleSaving}
+                        >
+                          Uredi
+                        </button>
+                        <button
+                          type="button"
+                          className="act-btn act-danger schedule-list__action"
+                          onClick={() => handleScheduleDelete(schedule)}
+                          disabled={scheduleSaving}
+                        >
+                          Obriši
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
-        </form>
 
-        <form className="act-schedule" onSubmit={(e) => e.preventDefault()} aria-label="Pregled rasporeda aktivnosti">
+          <form className="act-form act-form--activity" onSubmit={handleSubmit}>
+            <h3>{editingId ? 'Izmena aktivnosti' : 'Dodaj novu aktivnost'}</h3>
+
+            <label className="act-field">
+              <span>Raspored</span>
+              <select
+                className="act-input"
+                value={form.Raspored || selectedScheduleId}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  onField('Raspored', value);
+                  setSelectedScheduleId(value);
+                }}
+                disabled={disableActivityForm || schedules.length === 0}
+              >
+                <option value="">-- izaberi --</option>
+                {schedules.map(schedule => (
+                  <option key={schedule.Id} value={schedule.Id}>{schedule.Naziv}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="act-field">
+              <span>Naziv aktivnosti</span>
+              <input
+                className="act-input"
+                value={form.Naziv}
+                onChange={(e) => onField('Naziv', e.target.value)}
+                placeholder="npr. Otvaranje festivala"
+                disabled={disableActivityForm}
+              />
+            </label>
+
+            <label className="act-field">
+              <span>Opis (opciono)</span>
+              <textarea
+                className="act-textarea"
+                rows={3}
+                value={form.Opis}
+                onChange={(e) => onField('Opis', e.target.value)}
+                placeholder="Detalji, govornici, napomene..."
+                disabled={disableActivityForm}
+              />
+            </label>
+
+            <div className="act-two-col">
+              <label className="act-field">
+                <span>Dan</span>
+                <select
+                  className="act-input"
+                  value={form.Dan}
+                  onChange={(e) => onField('Dan', e.target.value)}
+                  disabled={disableActivityForm || days.length === 0}
+                >
+                  <option value="">-- izaberi --</option>
+                  {days.map(day => (
+                    <option key={day.Id} value={day.Id}>
+                      {day.Naziv}{day.DatumLabel ? ` · ${day.DatumLabel}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="act-field">
+                <span>Lokacija</span>
+                <select
+                  className="act-input"
+                  value={form.Lokacija}
+                  onChange={(e) => onField('Lokacija', e.target.value)}
+                  disabled={disableActivityForm || locations.length === 0}
+                >
+                  <option value="">-- izaberi --</option>
+                  {locations.map(loc => (
+                    <option key={loc.Id} value={loc.Id}>{loc.Naziv}{loc.Tip ? ` · ${loc.Tip}` : ''}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <label className="act-field">
+              <span>Tip aktivnosti</span>
+              <select
+                className="act-input"
+                value={form.Tip}
+                onChange={(e) => onField('Tip', e.target.value)}
+                disabled={disableActivityForm}
+              >
+                {TIPOVI_AKTIVNOSTI.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </label>
+
+            <div className="act-two-col">
+              <label className="act-field">
+                <span>Početak</span>
+                <input
+                  className="act-input"
+                  type="datetime-local"
+                  value={form.start}
+                  onChange={(e) => onField('start', e.target.value)}
+                  disabled={disableActivityForm}
+                />
+              </label>
+              <label className="act-field">
+                <span>Kraj</span>
+                <input
+                  className="act-input"
+                  type="datetime-local"
+                  value={form.end}
+                  onChange={(e) => onField('end', e.target.value)}
+                  disabled={disableActivityForm}
+                />
+              </label>
+            </div>
+
+            <div className="act-actions">
+              <button className="act-btn" type="submit" disabled={disableActivityForm}>
+                {editingId ? 'Sačuvaj izmene' : 'Dodaj aktivnost'}
+              </button>
+              {editingId && (
+                <button
+                  className="act-btn act-secondary"
+                  type="button"
+                  onClick={resetForm}
+                  disabled={saving}
+                >
+                  Otkaži izmenu
+                </button>
+              )}
+            </div>
+
+            {schedules.length === 0 && (
+              <div className="act-note act-note--inline">
+                Kreiraj raspored iznad kako bi dodavao aktivnosti.
+              </div>
+            )}
+          </form>
+        </div>
+
+        <div className="act-schedule" aria-label="Pregled rasporeda aktivnosti">
           <fieldset className="act-schedule-fieldset">
             <legend>Raspored</legend>
+            <div className="act-schedule-meta">
+              {selectedSchedule ? (
+                <>
+                  <h4>{selectedSchedule.Naziv}</h4>
+                  <p>{selectedSchedule.Opis || 'Bez opisa'}</p>
+                  <div className="act-schedule-tags">
+                    <span>{selectedDay ? `${selectedDay.Naziv}${selectedDay.DatumLabel ? ` · ${selectedDay.DatumLabel}` : ''}` : 'Dan nije definisan'}</span>
+                    <span>{selectedLocation ? selectedLocation.Naziv : 'Lokacija nije definisana'}</span>
+                  </div>
+                </>
+              ) : (
+                <p className="act-empty">Izaberi raspored sa leve strane da bi prikazao aktivnosti.</p>
+              )}
+            </div>
             <table className="act-table">
               <thead>
                 <tr>
@@ -530,12 +925,17 @@ export default function Activities({ eventId }){
                 </tr>
               </thead>
               <tbody>
-                {scheduleRows.length === 0 && (
+                {!selectedScheduleId && (
+                  <tr>
+                    <td colSpan={6} className="act-empty">Izaberi raspored da bi prikazao aktivnosti.</td>
+                  </tr>
+                )}
+                {selectedScheduleId && scheduleRows.length === 0 && (
                   <tr>
                     <td colSpan={6} className="act-empty">Još uvek nema unetih aktivnosti.</td>
                   </tr>
                 )}
-                {scheduleRows.map(row => (
+                {selectedScheduleId && scheduleRows.map(row => (
                   <tr key={row.Id}>
                     <td>
                       <div className="act-cell-main">{row.DayName}</div>
@@ -564,7 +964,7 @@ export default function Activities({ eventId }){
               </tbody>
             </table>
           </fieldset>
-        </form>
+        </div>
       </div>
     </Section>
   );

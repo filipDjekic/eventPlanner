@@ -30,6 +30,9 @@ namespace EventOrganizerAPI.Models
         public string Tip { get; set; }
 
         [BsonRepresentation(BsonType.ObjectId)]
+        public string RasporedId { get; set; }
+
+        [BsonRepresentation(BsonType.ObjectId)]
         public List<string> Notifikacije { get; set; } = new();
 
         [BsonRepresentation(BsonType.ObjectId)]
