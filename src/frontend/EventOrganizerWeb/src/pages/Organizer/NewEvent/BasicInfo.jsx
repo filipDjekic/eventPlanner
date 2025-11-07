@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import Section from './Section';
 import '../../../styles/NewEvent/basicinfo.css';
 import { getAuth } from '../../../utils/auth';
-import * as basicInfoApi from '../../../services/basicInfoApi';
+import * as basicInfoApi from '../../../services/basicinfoapi';
 import * as neweventApi from '../../../services/newEventApi';
 
 const KATEGORIJE = ['utakmica', 'protest', 'vašar', 'žurka', 'festival', 'ostalo'];
