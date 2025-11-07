@@ -270,6 +270,8 @@ export default function Activities({ eventId }){
     });
   }, [activities, dayById, locationById]);
 
+  const totalScheduleEntries = scheduleRows.length;
+
   const onField = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
@@ -391,6 +393,7 @@ export default function Activities({ eventId }){
         saving ? { label: 'Čuvanje...', tone: 'info' } : null,
         !hasEvent ? { label: 'Draft nije kreiran', tone: 'warning' } : null,
         { label: `Aktivnosti: ${activities.length || 0}` },
+        { label: `Raspored: ${totalScheduleEntries}` },
       ].filter(Boolean)}
     >
       {!hasEvent && (
@@ -512,54 +515,56 @@ export default function Activities({ eventId }){
           </div>
         </form>
 
-        <div className="act-schedule">
-          <h3>Raspored</h3>
-          <table className="act-table">
-            <thead>
-              <tr>
-                <th>Dan</th>
-                <th>Lokacija</th>
-                <th>Aktivnost</th>
-                <th>Vreme</th>
-                <th>Tip</th>
-                <th>Akcije</th>
-              </tr>
-            </thead>
-            <tbody>
-              {scheduleRows.length === 0 && (
+        <form className="act-schedule" onSubmit={(e) => e.preventDefault()} aria-label="Pregled rasporeda aktivnosti">
+          <fieldset className="act-schedule-fieldset">
+            <legend>Raspored</legend>
+            <table className="act-table">
+              <thead>
                 <tr>
-                  <td colSpan={6} className="act-empty">Još uvek nema unetih aktivnosti.</td>
+                  <th>Dan</th>
+                  <th>Lokacija</th>
+                  <th>Aktivnost</th>
+                  <th>Vreme</th>
+                  <th>Tip</th>
+                  <th>Akcije</th>
                 </tr>
-              )}
-              {scheduleRows.map(row => (
-                <tr key={row.Id}>
-                  <td>
-                    <div className="act-cell-main">{row.DayName}</div>
-                    <div className="act-cell-sub">{row.DayLabel}</div>
-                  </td>
-                  <td>
-                    <div className="act-cell-main">{row.LocationName}</div>
-                    <div className="act-cell-sub">{row.LocationTip}</div>
-                  </td>
-                  <td>
-                    <div className="act-cell-main">{row.Naziv}</div>
-                    <div className="act-cell-sub">{row.Opis || 'Bez opisa'}</div>
-                  </td>
-                  <td>
-                    <div className="act-cell-main">{row.StartLabel} – {row.EndLabel}</div>
-                  </td>
-                  <td>{row.Tip}</td>
-                  <td>
-                    <div className="act-row-actions">
-                      <button className="act-btn act-secondary" type="button" onClick={() => handleEdit(row)} disabled={saving}>Uredi</button>
-                      <button className="act-btn act-danger" type="button" onClick={() => handleDelete(row)} disabled={saving}>Obriši</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {scheduleRows.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="act-empty">Još uvek nema unetih aktivnosti.</td>
+                  </tr>
+                )}
+                {scheduleRows.map(row => (
+                  <tr key={row.Id}>
+                    <td>
+                      <div className="act-cell-main">{row.DayName}</div>
+                      <div className="act-cell-sub">{row.DayLabel}</div>
+                    </td>
+                    <td>
+                      <div className="act-cell-main">{row.LocationName}</div>
+                      <div className="act-cell-sub">{row.LocationTip}</div>
+                    </td>
+                    <td>
+                      <div className="act-cell-main">{row.Naziv}</div>
+                      <div className="act-cell-sub">{row.Opis || 'Bez opisa'}</div>
+                    </td>
+                    <td>
+                      <div className="act-cell-main">{row.StartLabel} – {row.EndLabel}</div>
+                    </td>
+                    <td>{row.Tip}</td>
+                    <td>
+                      <div className="act-row-actions">
+                        <button className="act-btn act-secondary" type="button" onClick={() => handleEdit(row)} disabled={saving}>Uredi</button>
+                        <button className="act-btn act-danger" type="button" onClick={() => handleDelete(row)} disabled={saving}>Obriši</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </fieldset>
+        </form>
       </div>
     </Section>
   );
