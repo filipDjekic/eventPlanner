@@ -32,6 +32,30 @@
   margin-bottom: 20px;
 }
 
+.pl-meta-fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  border: 1px solid var(--ne-border);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 0;
+  min-width: 220px;
+  background: var(--ne-surface-alt);
+}
+
+.pl-meta-fieldset[disabled] {
+  opacity: 0.75;
+}
+
+.pl-meta-fieldset legend {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ne-text-muted);
+  padding: 0 8px;
+}
+
 .pl-meta .pl-field {
   display: flex;
   flex-direction: column;

@@ -52,7 +52,7 @@ export async function update(id, dto) {
     TipLokacije: dto.TipLokacije == null ? undefined : String(dto.TipLokacije),
     Resursi: Array.isArray(dto.Resursi) ? dto.Resursi : undefined,
   };
-  const { data } = await api.put('lokacije/azuriraj', payload);
+  const { data } = await api.put(`lokacije/azuriraj/${id}`, payload);
   return data;
 }
 

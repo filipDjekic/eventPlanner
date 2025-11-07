@@ -561,33 +561,6 @@ export default function PriceList({ eventId }){
     setMode('editing');
   }, [currentListId]);
 
-  const renderControls = () => {
-    if (mode === 'creating'){
-      return (
-        <div className="pl-controls">
-          <button className="pl-btn" onClick={handleSaveNew} disabled={saving}>Sačuvaj</button>
-          <button className="pl-btn pl-secondary" onClick={handleCancel} disabled={saving}>Otkaži</button>
-        </div>
-      );
-    }
-    if (mode === 'editing'){
-      return (
-        <div className="pl-controls">
-          <button className="pl-btn" onClick={handleSaveChanges} disabled={saving}>Sačuvaj izmene</button>
-          <button className="pl-btn pl-secondary" onClick={handleCancel} disabled={saving}>Odustani</button>
-        </div>
-      );
-    }
-    if (mode === 'view'){
-      return null;
-    }
-    return (
-      <div className="pl-controls">
-        <button className="pl-btn" onClick={startNew} disabled={!hasEvent || loading || saving}>Dodaj cenovnik</button>
-      </div>
-    );
-  };
-
   const locationNameById = useCallback((id) => {
     const match = (locations || []).find((loc) => String(locationsApi.normalizeId(loc)) === String(id));
     return match?.Naziv || match?.naziv || 'Lokacija';
@@ -599,10 +572,24 @@ export default function PriceList({ eventId }){
     return existingLists.length ? { label: 'Postojeći cenovnik', tone: 'success' } : { label: 'Nema cenovnika', tone: 'warning' };
   })();
 
+  const handleMetadataSubmit = useCallback((e) => {
+    e?.preventDefault();
+    if (mode === 'creating'){
+      handleSaveNew();
+      return;
+    }
+    if (mode === 'editing'){
+      handleSaveChanges();
+    }
+  }, [handleSaveNew, handleSaveChanges, mode]);
+
+  const totalLists = existingLists.length || 0;
+
   const headerBadges = [
     loading ? { label: 'Učitavanje...', tone: 'info' } : null,
     saving ? { label: 'Čuvanje...', tone: 'info' } : null,
     modeBadge,
+    { label: `Cenovnici: ${totalLists}` },
     { label: `Stavki: ${items.length || 0}` },
   ].filter(Boolean);
 
@@ -704,35 +691,55 @@ export default function PriceList({ eventId }){
         </div>
       ) : (
         <>
-          <div className="pl-meta">
-            <div className="pl-field">
-              <label>Naziv cenovnika</label>
-              <input
-                className="pl-input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={!isEditable}
-                placeholder="npr. Pića"
-              />
+          <form className="pl-meta" onSubmit={handleMetadataSubmit}>
+            <fieldset className="pl-meta-fieldset" disabled={!isEditable}>
+              <legend>Osnovne informacije</legend>
+              <div className="pl-field">
+                <label htmlFor="pl-name">Naziv cenovnika</label>
+                <input
+                  id="pl-name"
+                  className="pl-input"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="npr. Pića"
+                />
+              </div>
+              <div className="pl-field">
+                <label htmlFor="pl-location">Lokacija</label>
+                <select
+                  id="pl-location"
+                  className="pl-select"
+                  value={locationId}
+                  onChange={(e) => setLocationId(e.target.value)}
+                >
+                  <option value="">-- Odaberi lokaciju --</option>
+                  {locations.map((loc) => {
+                    const id = String(locationsApi.normalizeId(loc) || '');
+                    return (
+                      <option key={id} value={id}>{loc?.Naziv || loc?.naziv || 'Lokacija'}</option>
+                    );
+                  })}
+                </select>
+              </div>
+            </fieldset>
+            <div className="pl-controls">
+              {mode === 'creating' && (
+                <>
+                  <button className="pl-btn" type="submit" disabled={saving}>Sačuvaj</button>
+                  <button className="pl-btn pl-secondary" type="button" onClick={handleCancel} disabled={saving}>Otkaži</button>
+                </>
+              )}
+              {mode === 'editing' && (
+                <>
+                  <button className="pl-btn" type="submit" disabled={saving}>Sačuvaj izmene</button>
+                  <button className="pl-btn pl-secondary" type="button" onClick={handleCancel} disabled={saving}>Odustani</button>
+                </>
+              )}
+              {mode === 'idle' && (
+                <button className="pl-btn" type="button" onClick={startNew} disabled={!hasEvent || loading || saving}>Dodaj cenovnik</button>
+              )}
             </div>
-            <div className="pl-field">
-              <label>Lokacija</label>
-              <select
-                className="pl-select"
-                value={locationId}
-                onChange={(e) => setLocationId(e.target.value)}
-                disabled={!isEditable}
-              >
-                <option value="">-- Odaberi lokaciju --</option>
-                {locations.map((loc) => {
-                  const id = String(locationsApi.normalizeId(loc) || '');
-                  return (
-                    <option key={id} value={id}>{loc?.Naziv || loc?.naziv || 'Lokacija'}</option>
-                  );
-                })}
-              </select>
-            </div>
-          </div>
+          </form>
 
           <div className="pl-content">
             <div className="pl-form-wrap">
@@ -847,8 +854,6 @@ export default function PriceList({ eventId }){
           </div>
         </>
       )}
-
-      {renderControls()}
 
       {!hasEvent && (
         <p className="pl-message">Sačuvaj osnovne informacije o događaju da bi mogao da dodaš cenovnik.</p>
