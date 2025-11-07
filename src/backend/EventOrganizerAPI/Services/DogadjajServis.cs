@@ -43,6 +43,7 @@ namespace EventOrganizerAPI.Services
                 Dani = new List<string>(),
                 Cenovnici = dto.Cenovnici ?? new List<string>(),
                 Aktivnosti = dto.Aktivnosti ?? new List<string>(),
+                Rasporedi = dto.Rasporedi ?? new List<string>(),
                 Prijavljeni = new List<string>(),
                 Tagovi = dto.Tagovi,
                 Notifikacije = new List<string>(),
@@ -81,6 +82,7 @@ namespace EventOrganizerAPI.Services
                 Dani = d.Dani,
                 Cenovnici = d.Cenovnici,
                 Aktivnosti = d.Aktivnosti,
+                Rasporedi = d.Rasporedi,
                 Prijavljeni = d.Prijavljeni,
                 Tagovi = d.Tagovi,
                 Notifikacije = d.Notifikacije,
@@ -128,6 +130,9 @@ namespace EventOrganizerAPI.Services
 
             if (dto.Aktivnosti != null)
                 update = update.Set(d => d.Aktivnosti, dto.Aktivnosti);
+
+            if (dto.Rasporedi != null)
+                update = update.Set(d => d.Rasporedi, dto.Rasporedi);
 
             await _dogadjaji.UpdateOneAsync(filter, update);
         }

@@ -80,3 +80,10 @@ export async function updateActivityIds(eventId, activityIds){
   const payload = { ...rest, Id: eventId, Aktivnosti: Array.from(new Set(activityIds || [])) };
   return await updateDraft(eventId, payload);
 }
+
+export async function updateScheduleIds(eventId, scheduleIds){
+  const ev = await getById(eventId);
+  const { Id, _id, ...rest } = ev || {};
+  const payload = { ...rest, Id: eventId, Rasporedi: Array.from(new Set(scheduleIds || [])) };
+  return await updateDraft(eventId, payload);
+}

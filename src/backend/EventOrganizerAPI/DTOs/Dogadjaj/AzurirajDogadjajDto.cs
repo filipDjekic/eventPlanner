@@ -21,6 +21,7 @@ namespace EventOrganizerAPI.DTOs.Dogadjaj
         public List<string>? Dani {  get; set; }
         public List<string>? Cenovnici { get; set; }
         public List<string>? Aktivnosti { get; set; }
+        public List<string>? Rasporedi { get; set; }
     }
 
 }

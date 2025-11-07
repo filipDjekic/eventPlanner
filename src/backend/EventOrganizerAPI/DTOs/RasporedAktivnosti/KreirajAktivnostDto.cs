@@ -13,5 +13,6 @@ namespace EventOrganizerAPI.DTOs.RasporedAktivnosti
         public string Dan { get; set; }
         public string Dogadjaj { get; set; }
         public string Tip { get; set; }
+        public string RasporedId { get; set; }
     }
 }

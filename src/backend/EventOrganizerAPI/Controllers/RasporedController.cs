@@ -30,6 +30,13 @@ namespace EventOrganizerAPI.Controllers
             return Ok(rezultat);
         }
 
+        [HttpGet("dogadjaj/{dogadjajId}")]
+        public async Task<IActionResult> VratiZaDogadjaj(string dogadjajId)
+        {
+            var rezultat = await _servis.VratiZaDogadjaj(dogadjajId);
+            return Ok(rezultat);
+        }
+
         [HttpGet("vrati-po-id/{id}")]
         public async Task<IActionResult> VratiPoId(string id)
         {

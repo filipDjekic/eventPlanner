@@ -9,6 +9,7 @@ namespace EventOrganizerAPI.Services.Interfaces
     {
         Task<Raspored> Kreiraj(KreirajRasporedDto dto);
         Task<List<Raspored>> VratiSve();
+        Task<List<Raspored>> VratiZaDogadjaj(string dogadjajId);
         Task<Raspored> VratiPoId(string id);
         Task Azuriraj(AzurirajRasporedDto dto);
         Task Obrisi(string id);

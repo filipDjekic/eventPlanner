@@ -32,7 +32,8 @@ export async function create(dto){
     Lokacija: dto?.Lokacija || dto?.lokacija || '',
     Dan: dto?.Dan || dto?.dan || '',
     Dogadjaj: dto?.Dogadjaj || dto?.dogadjaj || dto?.DogadjajId || dto?.dogadjajId || '',
-    Tip: dto?.Tip || dto?.tip || 'Ostalo'
+    Tip: dto?.Tip || dto?.tip || 'Ostalo',
+    RasporedId: dto?.RasporedId || dto?.rasporedId || dto?.Raspored || dto?.raspored || ''
   };
   const { data } = await api.post('aktivnosti/kreiraj', payload);
   return data;
@@ -49,6 +50,7 @@ export async function update(id, dto){
     Dan: dto?.Dan,
     Dogadjaj: dto?.Dogadjaj,
     Tip: dto?.Tip,
+    RasporedId: dto?.RasporedId,
   };
   const { data } = await api.put(`aktivnosti/azuriraj/${id}`, payload);
   return data;
