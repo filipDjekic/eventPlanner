@@ -99,7 +99,7 @@ export default function Tickets({ eventId, initialCapacity, initialInfinite }){
   }, [eventId, initialCapacity, initialInfinite]);
 
   useEffect(() => {
-    if (!eventId || infinite !== true) return;
+    if (infinite !== true) return;
     let autoAlready = false;
     let draftTicket = null;
     setTickets(prev => {
@@ -110,6 +110,7 @@ export default function Tickets({ eventId, initialCapacity, initialInfinite }){
       }
       draftTicket = {
         localId: `auto-${Math.random().toString(36).slice(2)}`,
+        Id: null,
         Naziv: 'Ulaznica',
         Tip: 'besplatna',
         Cena: 0,
@@ -121,7 +122,7 @@ export default function Tickets({ eventId, initialCapacity, initialInfinite }){
       return [draftTicket, ...prev];
     });
 
-    if (autoAlready || !draftTicket) return;
+    if (autoAlready || !draftTicket || !eventId) return;
 
     (async () => {
       try{
