@@ -855,8 +855,6 @@ export default function PriceList({ eventId }){
         </>
       )}
 
-      {renderControls()}
-
       {!hasEvent && (
         <p className="pl-message">Sačuvaj osnovne informacije o događaju da bi mogao da dodaš cenovnik.</p>
       )}
