@@ -141,8 +141,9 @@ export default function Activities({ eventId }){
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [editingId, setEditingId] = useState(null);
   const [scheduleForm, setScheduleForm] = useState({ ...EMPTY_SCHEDULE_FORM });
-  const [editingScheduleId, setEditingScheduleId] = useState(null);
+  const [scheduleFormMode, setScheduleFormMode] = useState('hidden');
   const [selectedScheduleId, setSelectedScheduleId] = useState('');
+  const [lastSelectedScheduleId, setLastSelectedScheduleId] = useState('');
 
   const hasEvent = Boolean(eventId);
 
@@ -248,8 +249,9 @@ export default function Activities({ eventId }){
       setLocations([]);
       setSchedules([]);
       setScheduleForm({ ...EMPTY_SCHEDULE_FORM });
-      setEditingScheduleId(null);
+      setScheduleFormMode('hidden');
       setSelectedScheduleId('');
+      setLastSelectedScheduleId('');
       return;
     }
     let alive = true;
@@ -310,13 +312,22 @@ export default function Activities({ eventId }){
   }, [days, locations, editingId, selectedScheduleId]);
 
   useEffect(() => {
-    if (editingScheduleId) return;
-    setScheduleForm(prev => ({
-      ...prev,
-      Dan: prev.Dan || days[0]?.Id || '',
-      Lokacija: prev.Lokacija || locations[0]?.Id || '',
-    }));
-  }, [days, locations, editingScheduleId]);
+    if (scheduleFormMode !== 'create') return;
+    setScheduleForm(prev => {
+      const hasDay = prev.Dan && days.some(day => String(day.Id) === String(prev.Dan));
+      const hasLocation = prev.Lokacija && locations.some(loc => String(loc.Id) === String(prev.Lokacija));
+      const nextDay = hasDay ? prev.Dan : (days[0]?.Id || '');
+      const nextLocation = hasLocation ? prev.Lokacija : (locations[0]?.Id || '');
+      if (nextDay === prev.Dan && nextLocation === prev.Lokacija){
+        return prev;
+      }
+      return {
+        ...prev,
+        Dan: nextDay,
+        Lokacija: nextLocation,
+      };
+    });
+  }, [days, locations, scheduleFormMode]);
 
   const dayById = useMemo(() => {
     const map = new Map();
@@ -335,6 +346,99 @@ export default function Activities({ eventId }){
     schedules.forEach(s => { if (s?.Id) map.set(String(s.Id), s); });
     return map;
   }, [schedules]);
+
+  useEffect(() => {
+    if (scheduleFormMode === 'create' || scheduleFormMode === 'edit') return;
+
+    if (!selectedScheduleId){
+      if (scheduleFormMode !== 'hidden'){
+        setScheduleFormMode('hidden');
+      }
+      setScheduleForm({ ...EMPTY_SCHEDULE_FORM });
+      return;
+    }
+
+    const schedule = scheduleById.get(String(selectedScheduleId));
+    if (!schedule) return;
+
+    setScheduleForm({
+      Naziv: schedule.Naziv || '',
+      Opis: schedule.Opis || '',
+      Dan: schedule.Dan || '',
+      Lokacija: schedule.Lokacija || '',
+    });
+
+    if (scheduleFormMode !== 'view'){
+      setScheduleFormMode('view');
+    }
+  }, [scheduleById, scheduleFormMode, selectedScheduleId]);
+
+  const restoreSelectedSchedule = useCallback(() => {
+    if (!selectedScheduleId){
+      setScheduleForm({ ...EMPTY_SCHEDULE_FORM });
+      setScheduleFormMode('hidden');
+      return;
+    }
+    const schedule = scheduleById.get(String(selectedScheduleId));
+    if (!schedule){
+      setScheduleForm({ ...EMPTY_SCHEDULE_FORM });
+      setScheduleFormMode('hidden');
+      return;
+    }
+    setScheduleForm({
+      Naziv: schedule.Naziv || '',
+      Opis: schedule.Opis || '',
+      Dan: schedule.Dan || '',
+      Lokacija: schedule.Lokacija || '',
+    });
+    setScheduleFormMode('view');
+  }, [scheduleById, selectedScheduleId]);
+
+  const startScheduleCreate = useCallback(() => {
+    setLastSelectedScheduleId(selectedScheduleId || '');
+    setSelectedScheduleId('');
+    setScheduleForm({
+      ...EMPTY_SCHEDULE_FORM,
+      Dan: days[0]?.Id || '',
+      Lokacija: locations[0]?.Id || '',
+    });
+    setScheduleFormMode('create');
+  }, [days, locations, selectedScheduleId]);
+
+  const cancelScheduleEdit = useCallback(() => {
+    restoreSelectedSchedule();
+  }, [restoreSelectedSchedule]);
+
+  const cancelScheduleCreate = useCallback(() => {
+    if (lastSelectedScheduleId){
+      const schedule = scheduleById.get(String(lastSelectedScheduleId));
+      setSelectedScheduleId(String(lastSelectedScheduleId));
+      if (schedule){
+        setScheduleForm({
+          Naziv: schedule.Naziv || '',
+          Opis: schedule.Opis || '',
+          Dan: schedule.Dan || '',
+          Lokacija: schedule.Lokacija || '',
+        });
+        setScheduleFormMode('view');
+      }else{
+        setScheduleForm({ ...EMPTY_SCHEDULE_FORM });
+        setScheduleFormMode('hidden');
+      }
+    }else{
+      setSelectedScheduleId('');
+      setScheduleForm({ ...EMPTY_SCHEDULE_FORM });
+      setScheduleFormMode('hidden');
+    }
+    setLastSelectedScheduleId('');
+  }, [lastSelectedScheduleId, scheduleById]);
+
+  const handleScheduleSelect = useCallback((scheduleId) => {
+    if (!scheduleId) return;
+    setLastSelectedScheduleId('');
+    setSelectedScheduleId(String(scheduleId));
+    setScheduleFormMode('view');
+  }, []);
 
   const scheduleRows = useMemo(() => {
     if (!selectedScheduleId) return [];
@@ -392,15 +496,6 @@ export default function Activities({ eventId }){
     setScheduleForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const resetScheduleForm = () => {
-    setScheduleForm({
-      ...EMPTY_SCHEDULE_FORM,
-      Dan: days[0]?.Id || '',
-      Lokacija: locations[0]?.Id || '',
-    });
-    setEditingScheduleId(null);
-  };
-
   const validateSchedule = () => {
     if (!hasEvent){
       toast.error('Sačuvaj osnovne informacije o događaju.');
@@ -423,6 +518,12 @@ export default function Activities({ eventId }){
 
   const handleScheduleSubmit = async (e) => {
     e?.preventDefault();
+
+    if (scheduleFormMode === 'view'){
+      setScheduleFormMode('edit');
+      return;
+    }
+
     if (!validateSchedule()) return;
 
     const payload = {
@@ -435,10 +536,10 @@ export default function Activities({ eventId }){
 
     try{
       setScheduleSaving(true);
-      if (editingScheduleId){
-        await schedulesApi.update(editingScheduleId, { Id: editingScheduleId, ...payload });
+      if (scheduleFormMode === 'edit' && selectedScheduleId){
+        await schedulesApi.update(selectedScheduleId, { Id: selectedScheduleId, ...payload });
         toast.success('Raspored je ažuriran.');
-      }else{
+      }else if (scheduleFormMode === 'create'){
         const created = await schedulesApi.create(payload);
         toast.success('Raspored je kreiran.');
         const createdId = created?.Id || created?._id || created?.id;
@@ -448,7 +549,8 @@ export default function Activities({ eventId }){
       }
       await fetchSchedules();
       await refreshActivities();
-      resetScheduleForm();
+      setLastSelectedScheduleId('');
+      setScheduleFormMode('view');
       window.dispatchEvent(new CustomEvent('ne:schedules:updated', { detail: { eventId } }));
     }catch(err){
       console.error('Čuvanje rasporeda nije uspelo:', err);
@@ -460,14 +562,15 @@ export default function Activities({ eventId }){
 
   const handleScheduleEdit = (schedule) => {
     if (!schedule?.Id) return;
-    setEditingScheduleId(schedule.Id);
+    setSelectedScheduleId(String(schedule.Id));
+    setLastSelectedScheduleId('');
     setScheduleForm({
       Naziv: schedule.Naziv || '',
       Opis: schedule.Opis || '',
       Dan: schedule.Dan || '',
       Lokacija: schedule.Lokacija || '',
     });
-    setSelectedScheduleId(String(schedule.Id));
+    setScheduleFormMode('edit');
   };
 
   const handleScheduleDelete = async (schedule) => {
@@ -475,13 +578,19 @@ export default function Activities({ eventId }){
     if (!window.confirm('Obrisati ovaj raspored?')) return;
     try{
       setScheduleSaving(true);
+      const isSelected = String(selectedScheduleId) === String(schedule.Id);
+      if (isSelected){
+        setSelectedScheduleId('');
+        setScheduleForm({ ...EMPTY_SCHEDULE_FORM });
+        setScheduleFormMode('hidden');
+        setLastSelectedScheduleId('');
+      }else if (String(lastSelectedScheduleId) === String(schedule.Id)){
+        setLastSelectedScheduleId('');
+      }
       await schedulesApi.remove(schedule.Id);
       toast.success('Raspored obrisan.');
       await fetchSchedules();
       await refreshActivities();
-      if (editingScheduleId === schedule.Id){
-        resetScheduleForm();
-      }
       window.dispatchEvent(new CustomEvent('ne:schedules:updated', { detail: { eventId } }));
     }catch(err){
       console.error('Brisanje rasporeda nije uspelo:', err);
@@ -602,7 +711,18 @@ export default function Activities({ eventId }){
     }
   };
 
-  const disableScheduleForm = !hasEvent || scheduleSaving;
+  const scheduleInputsDisabled = !hasEvent || scheduleSaving || scheduleFormMode === 'hidden' || scheduleFormMode === 'view';
+  const scheduleSubmitDisabled = !hasEvent || scheduleSaving;
+  const isScheduleCreating = scheduleFormMode === 'create';
+  const isScheduleEditing = scheduleFormMode === 'edit';
+  const isScheduleView = scheduleFormMode === 'view';
+  const scheduleFormTitle = isScheduleCreating
+    ? 'Novi raspored'
+    : isScheduleEditing
+      ? 'Izmena rasporeda'
+      : selectedSchedule
+        ? selectedSchedule.Naziv || 'Pregled rasporeda'
+        : 'Raspored';
   const disableActivityForm = !hasEvent || saving || !selectedScheduleId || scheduleSaving;
 
   return (
@@ -625,82 +745,109 @@ export default function Activities({ eventId }){
 
       <div className="act-grid">
         <div className="act-left">
-          <form className="act-form act-form--schedule" onSubmit={handleScheduleSubmit}>
-            <h3>{editingScheduleId ? 'Izmena rasporeda' : 'Dodaj novi raspored'}</h3>
-
-            <label className="act-field">
-              <span>Naziv rasporeda</span>
-              <input
-                className="act-input"
-                value={scheduleForm.Naziv}
-                onChange={(e) => onScheduleField('Naziv', e.target.value)}
-                placeholder="npr. Jutarnji blok"
-                disabled={disableScheduleForm}
-              />
-            </label>
-
-            <label className="act-field">
-              <span>Opis (opciono)</span>
-              <textarea
-                className="act-textarea"
-                rows={3}
-                value={scheduleForm.Opis}
-                onChange={(e) => onScheduleField('Opis', e.target.value)}
-                placeholder="Kratak opis rasporeda, ciljne grupe..."
-                disabled={disableScheduleForm}
-              />
-            </label>
-
-            <div className="act-two-col">
-              <label className="act-field">
-                <span>Dan</span>
-                <select
-                  className="act-input"
-                  value={scheduleForm.Dan}
-                  onChange={(e) => onScheduleField('Dan', e.target.value)}
-                  disabled={disableScheduleForm || days.length === 0}
-                >
-                  <option value="">-- izaberi --</option>
-                  {days.map(day => (
-                    <option key={day.Id} value={day.Id}>
-                      {day.Naziv}{day.DatumLabel ? ` · ${day.DatumLabel}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="act-field">
-                <span>Lokacija</span>
-                <select
-                  className="act-input"
-                  value={scheduleForm.Lokacija}
-                  onChange={(e) => onScheduleField('Lokacija', e.target.value)}
-                  disabled={disableScheduleForm || locations.length === 0}
-                >
-                  <option value="">-- izaberi --</option>
-                  {locations.map(loc => (
-                    <option key={loc.Id} value={loc.Id}>{loc.Naziv}{loc.Tip ? ` · ${loc.Tip}` : ''}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className="act-actions">
-              <button className="act-btn" type="submit" disabled={disableScheduleForm}>
-                {editingScheduleId ? 'Sačuvaj raspored' : 'Dodaj raspored'}
+          <div className="act-form act-form--schedule">
+            <div className="act-form__header">
+              <h3>{scheduleFormTitle}</h3>
+              <button
+                type="button"
+                className="act-btn act-secondary"
+                onClick={startScheduleCreate}
+                disabled={scheduleSubmitDisabled || isScheduleCreating || isScheduleEditing}
+              >
+                Dodaj raspored
               </button>
-              {editingScheduleId && (
-                <button
-                  className="act-btn act-secondary"
-                  type="button"
-                  onClick={resetScheduleForm}
-                  disabled={scheduleSaving}
-                >
-                  Otkaži izmenu
-                </button>
-              )}
             </div>
-          </form>
+
+            {scheduleFormMode === 'hidden' ? (
+              <div className="act-note act-note--inline">Dodaj raspored kako bi planirao aktivnosti.</div>
+            ) : (
+              <form className="act-form__body" onSubmit={handleScheduleSubmit}>
+                <label className="act-field">
+                  <span>Naziv rasporeda</span>
+                  <input
+                    className="act-input"
+                    value={scheduleForm.Naziv}
+                    onChange={(e) => onScheduleField('Naziv', e.target.value)}
+                    placeholder="npr. Jutarnji blok"
+                    disabled={scheduleInputsDisabled}
+                  />
+                </label>
+
+                <label className="act-field">
+                  <span>Opis (opciono)</span>
+                  <textarea
+                    className="act-textarea"
+                    rows={3}
+                    value={scheduleForm.Opis}
+                    onChange={(e) => onScheduleField('Opis', e.target.value)}
+                    placeholder="Kratak opis rasporeda, ciljne grupe..."
+                    disabled={scheduleInputsDisabled}
+                  />
+                </label>
+
+                <div className="act-two-col">
+                  <label className="act-field">
+                    <span>Dan</span>
+                    <select
+                      className="act-input"
+                      value={scheduleForm.Dan}
+                      onChange={(e) => onScheduleField('Dan', e.target.value)}
+                      disabled={scheduleInputsDisabled || days.length === 0}
+                    >
+                      <option value="">-- izaberi --</option>
+                      {days.map(day => (
+                        <option key={day.Id} value={day.Id}>
+                          {day.Naziv}{day.DatumLabel ? ` · ${day.DatumLabel}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="act-field">
+                    <span>Lokacija</span>
+                    <select
+                      className="act-input"
+                      value={scheduleForm.Lokacija}
+                      onChange={(e) => onScheduleField('Lokacija', e.target.value)}
+                      disabled={scheduleInputsDisabled || locations.length === 0}
+                    >
+                      <option value="">-- izaberi --</option>
+                      {locations.map(loc => (
+                        <option key={loc.Id} value={loc.Id}>{loc.Naziv}{loc.Tip ? ` · ${loc.Tip}` : ''}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="act-actions">
+                  {isScheduleView ? (
+                    <button
+                      className="act-btn"
+                      type="button"
+                      onClick={() => setScheduleFormMode('edit')}
+                      disabled={scheduleSubmitDisabled || !selectedScheduleId}
+                    >
+                      Izmeni
+                    </button>
+                  ) : (
+                    <button className="act-btn" type="submit" disabled={scheduleSubmitDisabled}>
+                      {isScheduleEditing ? 'Sačuvaj izmene' : 'Sačuvaj raspored'}
+                    </button>
+                  )}
+                  {(isScheduleEditing || isScheduleCreating) && (
+                    <button
+                      className="act-btn act-secondary"
+                      type="button"
+                      onClick={isScheduleEditing ? cancelScheduleEdit : cancelScheduleCreate}
+                      disabled={scheduleSaving}
+                    >
+                      Otkaži
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
+          </div>
 
           <div className="schedule-list">
             <div className="schedule-list__header">
@@ -723,7 +870,7 @@ export default function Activities({ eventId }){
                       <button
                         type="button"
                         className="schedule-list__select"
-                        onClick={() => setSelectedScheduleId(String(schedule.Id))}
+                        onClick={() => handleScheduleSelect(schedule.Id)}
                         disabled={scheduleSaving}
                       >
                         <span className="schedule-list__name">{schedule.Naziv}</span>

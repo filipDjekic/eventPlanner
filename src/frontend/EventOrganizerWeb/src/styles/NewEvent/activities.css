@@ -28,6 +28,23 @@
   color: var(--ne-text-strong);
 }
 
+.act-form__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.act-form__header h3 {
+  margin-bottom: 0;
+}
+
+.act-form__body {
+  display: flex;
+  flex-direction: column;
+}
+
 .act-field {
   display: flex;
   flex-direction: column;
